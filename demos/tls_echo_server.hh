@@ -66,7 +66,8 @@ public:
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
                 return with_gate(_gate, [this] {
-                    return _socket.accept().then([this](::connected_socket s, socket_address a) {
+                    return _socket.accept().then([this](std::tuple<connected_socket, socket_address> result) {
+                        auto&& [s, a] = std::move(result);
                         if (_verbose) {
                             std::cout << "Got connection from "<< a << std::endl;
                         }

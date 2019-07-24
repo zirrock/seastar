@@ -210,7 +210,7 @@ public:
 };
 
 template <transport Transport>
-future<connected_socket, socket_address>
+future<std::tuple<connected_socket, socket_address>>
 posix_server_socket_impl<Transport>::accept() {
     return _lfd.accept().then([this] (pollable_fd fd, socket_address sa) {
         auto cth = _lba == server_socket::load_balancing_algorithm::connection_distribution ?
@@ -219,8 +219,7 @@ posix_server_socket_impl<Transport>::accept() {
         if (cpu == engine().cpu_id()) {
             std::unique_ptr<connected_socket_impl> csi(
                     new posix_connected_socket_impl<Transport>(make_lw_shared(std::move(fd)), std::move(cth), _allocator));
-            return make_ready_future<connected_socket, socket_address>(
-                    connected_socket(std::move(csi)), sa);
+            return make_ready_future<std::tuple<connected_socket, socket_address>>(std::make_tuple(connected_socket(std::move(csi)), sa));
         } else {
             smp::submit_to(cpu, [ssa = _sa, fd = std::move(fd.get_file_desc()), sa, cth = std::move(cth), allocator = _allocator] () mutable {
                 posix_ap_server_socket_impl<Transport>::move_connected_socket(ssa, pollable_fd(std::move(fd)), sa, std::move(cth), allocator);
@@ -242,7 +241,7 @@ socket_address posix_server_socket_impl<Transport>::local_address() const {
 }
 
 template <transport Transport>
-future<connected_socket, socket_address> posix_ap_server_socket_impl<Transport>::accept() {
+future<std::tuple<connected_socket, socket_address>> posix_ap_server_socket_impl<Transport>::accept() {
     auto conni = conn_q.find(_sa);
     if (conni != conn_q.end()) {
         connection c = std::move(conni->second);
@@ -250,9 +249,9 @@ future<connected_socket, socket_address> posix_ap_server_socket_impl<Transport>:
         try {
             std::unique_ptr<connected_socket_impl> csi(
                     new posix_connected_socket_impl<Transport>(make_lw_shared(std::move(c.fd)), std::move(c.connection_tracking_handle)));
-            return make_ready_future<connected_socket, socket_address>(connected_socket(std::move(csi)), std::move(c.addr));
+            return make_ready_future<std::tuple<connected_socket, socket_address>>(std::make_tuple(connected_socket(std::move(csi)), std::move(c.addr)));
         } catch (...) {
-            return make_exception_future<connected_socket, socket_address>(std::current_exception());
+            return make_exception_future<std::tuple<connected_socket, socket_address>>(std::current_exception());
         }
     } else {
         try {
@@ -260,7 +259,7 @@ future<connected_socket, socket_address> posix_ap_server_socket_impl<Transport>:
             assert(i.second);
             return i.first->second.get_future();
         } catch (...) {
-            return make_exception_future<connected_socket, socket_address>(std::current_exception());
+            return make_exception_future<std::tuple<connected_socket, socket_address>>(std::current_exception());
         }
     }
 }
@@ -277,13 +276,12 @@ posix_ap_server_socket_impl<Transport>::abort_accept() {
 }
 
 template <transport Transport>
-future<connected_socket, socket_address>
+future<std::tuple<connected_socket, socket_address>>
 posix_reuseport_server_socket_impl<Transport>::accept() {
     return _lfd.accept().then([allocator = _allocator] (pollable_fd fd, socket_address sa) {
         std::unique_ptr<connected_socket_impl> csi(
                 new posix_connected_socket_impl<Transport>(make_lw_shared(std::move(fd)), allocator));
-        return make_ready_future<connected_socket, socket_address>(
-            connected_socket(std::move(csi)), sa);
+        return make_ready_future<std::tuple<connected_socket, socket_address>>(std::make_tuple(connected_socket(std::move(csi)), sa));
     });
 }
 
@@ -305,7 +303,7 @@ posix_ap_server_socket_impl<Transport>::move_connected_socket(socket_address sa,
     if (i != sockets.end()) {
         try {
             std::unique_ptr<connected_socket_impl> csi(new posix_connected_socket_impl<Transport>(make_lw_shared(std::move(fd)), std::move(cth), allocator));
-            i->second.set_value(connected_socket(std::move(csi)), std::move(addr));
+            i->second.set_value(std::make_tuple(connected_socket(std::move(csi)), std::move(addr)));
         } catch (...) {
             i->second.set_exception(std::current_exception());
         }
@@ -385,7 +383,7 @@ posix_network_stack::listen(socket_address sa, listen_options opt) {
 }
 
 template<transport Transport>
-thread_local std::unordered_map<socket_address, promise<connected_socket, socket_address>> posix_ap_server_socket_impl<Transport>::sockets;
+thread_local std::unordered_map<socket_address, promise<std::tuple<connected_socket, socket_address>>> posix_ap_server_socket_impl<Transport>::sockets;
 template<transport Transport>
 thread_local std::unordered_multimap<socket_address, typename posix_ap_server_socket_impl<Transport>::connection> posix_ap_server_socket_impl<Transport>::conn_q;
 

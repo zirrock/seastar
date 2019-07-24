@@ -264,7 +264,7 @@ public:
     ///
     /// \see listen(socket_address sa)
     /// \see listen(socket_address sa, listen_options opts)
-    future<connected_socket, socket_address> accept();
+    future<std::tuple<connected_socket, socket_address>> accept();
 
     /// Stops any \ref accept() in progress.
     ///

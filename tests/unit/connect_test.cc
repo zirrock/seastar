@@ -53,7 +53,7 @@ SEASTAR_TEST_CASE(test_accept_after_abort) {
     auto distr = std::uniform_int_distribution<uint16_t>(12000, 65000);
     auto sa = make_ipv4_address({"127.0.0.1", distr(rnd)});
     return do_with(engine().net().listen(sa, listen_options()), [] (auto& listener) {
-        using ftype = future<connected_socket, socket_address>;
+        using ftype = future<std::tuple<connected_socket, socket_address>>;
         promise<ftype> p;
         future<ftype> done = p.get_future();
         auto f = listener.accept().then_wrapped([&listener, p = std::move(p)] (auto f) mutable {

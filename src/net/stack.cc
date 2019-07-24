@@ -152,9 +152,9 @@ server_socket& server_socket::operator=(server_socket&& cs) noexcept = default;
 server_socket::~server_socket() {
 }
 
-future<connected_socket, socket_address> server_socket::accept() {
+future<std::tuple<connected_socket, socket_address>> server_socket::accept() {
     if (_aborted) {
-        return make_exception_future<connected_socket, socket_address>(std::system_error(ECONNABORTED, std::system_category()));
+        return make_exception_future<std::tuple<connected_socket, socket_address>>(std::system_error(ECONNABORTED, std::system_category()));
     }
     return _ssi->accept();
 }

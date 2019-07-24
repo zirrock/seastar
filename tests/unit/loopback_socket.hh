@@ -187,9 +187,9 @@ public:
     explicit loopback_server_socket_impl(lw_shared_ptr<queue<connected_socket>> q)
             : _pending(std::move(q)) {
     }
-    future<connected_socket, socket_address> accept() override {
+    future<std::tuple<connected_socket, socket_address>> accept() override {
         return _pending->pop_eventually().then([] (connected_socket&& cs) {
-            return make_ready_future<connected_socket, socket_address>(std::move(cs), socket_address());
+            return make_ready_future<std::tuple<connected_socket, socket_address>>(std::make_tuple(std::move(cs), socket_address()));
         });
     }
     void abort_accept() override {

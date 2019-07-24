@@ -1119,13 +1119,14 @@ public:
     server_session(shared_ptr<server_credentials> creds, server_socket sock)
             : _creds(std::move(creds)), _sock(std::move(sock)) {
     }
-    future<connected_socket, socket_address> accept() override {
+    future<std::tuple<connected_socket, socket_address>> accept() override {
         // We're not actually doing anything very SSL until we get
         // an actual connection. Then we create a "server" session
         // and wrap it up after handshaking.
-        return _sock.accept().then([this](connected_socket s, socket_address addr) {
+        return _sock.accept().then([this](std::tuple<connected_socket, socket_address> result) {
+            auto&& [s, addr] = std::move(result);
             return wrap_server(_creds, std::move(s)).then([addr](connected_socket s) {
-                return make_ready_future<connected_socket, socket_address>(std::move(s), addr);
+                return make_ready_future<std::tuple<connected_socket, socket_address>>(std::make_tuple(std::move(s), addr));
             });
         });
     }

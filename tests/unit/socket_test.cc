@@ -51,7 +51,8 @@ future<> echo_server_loop() {
                   socket.shutdown_output();
               });
               return listener.accept().then(
-                  [](connected_socket s, socket_address a) {
+                  [](std::tuple<connected_socket, socket_address> result) {
+                      auto&& [s, a] = std::move(result);
                       return handle_connection(std::move(s));
                   }).then([l = std::move(listener)]() mutable { return l.abort_accept(); });
         });

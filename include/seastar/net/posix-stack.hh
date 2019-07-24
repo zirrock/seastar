@@ -134,13 +134,13 @@ class posix_ap_server_socket_impl : public server_socket_impl {
         conntrack::handle connection_tracking_handle;
         connection(pollable_fd xfd, socket_address xaddr, conntrack::handle cth) : fd(std::move(xfd)), addr(xaddr), connection_tracking_handle(std::move(cth)) {}
     };
-    static thread_local std::unordered_map<socket_address, promise<connected_socket, socket_address>> sockets;
+    static thread_local std::unordered_map<socket_address, promise<std::tuple<connected_socket, socket_address>>> sockets;
     static thread_local std::unordered_multimap<socket_address, connection> conn_q;
     socket_address _sa;
     compat::polymorphic_allocator<char>* _allocator;
 public:
     explicit posix_ap_server_socket_impl(socket_address sa, compat::polymorphic_allocator<char>* allocator = memory::malloc_allocator) : _sa(sa), _allocator(allocator) {}
-    virtual future<connected_socket, socket_address> accept() override;
+    virtual future<std::tuple<connected_socket, socket_address>> accept() override;
     virtual void abort_accept() override;
     socket_address local_address() const override {
         return _sa;
@@ -160,7 +160,7 @@ class posix_server_socket_impl : public server_socket_impl {
 public:
     explicit posix_server_socket_impl(socket_address sa, pollable_fd lfd, server_socket::load_balancing_algorithm lba,
         compat::polymorphic_allocator<char>* allocator=memory::malloc_allocator) : _sa(sa), _lfd(std::move(lfd)), _lba(lba), _allocator(allocator) {}
-    virtual future<connected_socket, socket_address> accept() override;
+    virtual future<std::tuple<connected_socket, socket_address>> accept() override;
     virtual void abort_accept() override;
     virtual socket_address local_address() const override;
 };
@@ -175,7 +175,7 @@ class posix_reuseport_server_socket_impl : public server_socket_impl {
 public:
     explicit posix_reuseport_server_socket_impl(socket_address sa, pollable_fd lfd,
         compat::polymorphic_allocator<char>* allocator=memory::malloc_allocator) : _sa(sa), _lfd(std::move(lfd)), _allocator(allocator) {}
-    virtual future<connected_socket, socket_address> accept() override;
+    virtual future<std::tuple<connected_socket, socket_address>> accept() override;
     virtual void abort_accept() override;
     virtual socket_address local_address() const override;
 };
