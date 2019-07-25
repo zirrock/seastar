@@ -224,6 +224,18 @@ public:
     /// terminates the connection if it has already been established.
     void shutdown();
 };
+/// @}
+
+/// \addtogroup networking-module
+/// @{
+
+/// Connected socket with address.
+///
+/// A \c a connected socket with its corresponding address.
+struct connected_socket_and_address {
+    connected_socket sock;
+    socket_address addr;
+};
 
 /// @}
 
