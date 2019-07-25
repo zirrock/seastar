@@ -66,11 +66,11 @@ public:
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
                 return with_gate(_gate, [this] {
-                    return _socket.accept().then([this](::connected_socket s, socket_address a) {
+                    return _socket.accept().then([this](connected_socket_and_address sock_and_addr) {
                         if (_verbose) {
-                            std::cout << "Got connection from "<< a << std::endl;
+                            std::cout << "Got connection from "<< sock_and_addr.addr << std::endl;
                         }
-                        auto strms = make_lw_shared<streams>(std::move(s));
+                        auto strms = make_lw_shared<streams>(std::move(sock_and_addr.sock));
                         return repeat([strms, this]() {
                             return strms->in.read().then([this, strms](temporary_buffer<char> buf) {
                                 if (buf.empty()) {

@@ -1357,8 +1357,8 @@ public:
         lo.reuse_address = true;
         _listener = engine().listen(make_ipv4_address({_port}), lo);
         keep_doing([this] {
-            return _listener->accept().then([this] (connected_socket fd, socket_address addr) mutable {
-                auto conn = make_lw_shared<connection>(std::move(fd), addr, _cache, _system_stats);
+            return _listener->accept().then([this] (connected_socket_and_address sock_and_addr) mutable {
+                auto conn = make_lw_shared<connection>(std::move(sock_and_addr.sock), sock_and_addr.addr, _cache, _system_stats);
                 do_until([conn] { return conn->_in.eof(); }, [conn] {
                     return conn->_proto.handle(conn->_in, conn->_out).then([conn] {
                         return conn->_out.flush();

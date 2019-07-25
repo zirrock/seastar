@@ -264,15 +264,15 @@ public:
     future<> do_accepts(int which) {
         ++_connections_being_accepted;
         return _listeners[which].accept().then_wrapped(
-                [this, which] (future<connected_socket, socket_address> f_cs_sa) mutable {
+                [this, which] (future<connected_socket_and_address> f_cs_sa) mutable {
             --_connections_being_accepted;
             if (_stopping || f_cs_sa.failed()) {
                 f_cs_sa.ignore_ready_future();
                 maybe_idle();
                 return;
             }
-            auto cs_sa = f_cs_sa.get();
-            auto conn = new connection(*this, std::get<0>(std::move(cs_sa)), std::get<1>(std::move(cs_sa)));
+            auto cs_sa = f_cs_sa.get0();
+            auto conn = new connection(*this, std::move(cs_sa.sock), std::move(cs_sa.addr));
             conn->process().then_wrapped([conn] (auto&& f) {
                 delete conn;
                 try {
@@ -282,7 +282,7 @@ public:
                 }
             });
             do_accepts(which);
-        }).then_wrapped([] (auto f) {
+        }).then_wrapped([] (future<> f) {
             try {
                 f.get();
             } catch (std::exception& ex) {

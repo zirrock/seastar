@@ -276,7 +276,7 @@ public:
     ///
     /// \see listen(socket_address sa)
     /// \see listen(socket_address sa, listen_options opts)
-    future<connected_socket, socket_address> accept();
+    future<connected_socket_and_address> accept();
 
     /// Stops any \ref accept() in progress.
     ///

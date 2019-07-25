@@ -975,12 +975,12 @@ future<> server::connection::send_unknown_verb_reply(compat::optional<rpc_clock_
 
   void server::accept() {
       keep_doing([this] () mutable {
-          return _ss.accept().then([this] (connected_socket fd, socket_address addr) mutable {
-              fd.set_nodelay(_options.tcp_nodelay);
+          return _ss.accept().then([this] (connected_socket_and_address sock_and_addr) mutable {
+              sock_and_addr.sock.set_nodelay(_options.tcp_nodelay);
               connection_id id = _options.streaming_domain ?
                       connection_id::make_id(_next_client_id++, uint16_t(engine().cpu_id())) :
                       connection_id::make_invalid_id(_next_client_id++);
-              auto conn = _proto->make_server_connection(*this, std::move(fd), std::move(addr), id);
+              auto conn = _proto->make_server_connection(*this, std::move(sock_and_addr.sock), std::move(sock_and_addr.addr), id);
               auto r = _conns.emplace(id, conn);
               assert(r.second);
               conn->process();
