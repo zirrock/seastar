@@ -32,6 +32,7 @@
 #include <seastar/core/future-util.hh>
 #include <seastar/core/metrics_registration.hh>
 #include <seastar/util/std-compat.hh>
+#include <seastar/net/tls.hh>
 #include <iostream>
 #include <algorithm>
 #include <unordered_map>
@@ -368,6 +369,12 @@ public:
     future<> set_routes(std::function<void(routes& r)> fun) {
         return _server_dist->invoke_on_all([fun](http_server& server) {
             fun(server._routes);
+        });
+    }
+
+    future<> listen(tls::credentials_builder creds, socket_address addr, listen_options lo) {
+        return _server_dist->invoke_on_all([creds, addr, lo] (http_server& serv) {
+            return serv.listen(tls::listen(creds.build_server_credentials(), addr, lo));
         });
     }
 
