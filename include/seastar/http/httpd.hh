@@ -242,10 +242,13 @@ public:
     explicit http_server(const sstring& name) : _stats(*this, name) {
         _date_format_timer.arm_periodic(1s);
     }
-    future<> listen(socket_address addr, listen_options lo) {
-        _listeners.push_back(engine().listen(addr, lo));
+    future<> listen(api_v2::server_socket&& sock) {
+        _listeners.push_back(std::move(sock));
         _stopped = when_all(std::move(_stopped), do_accepts(_listeners.size() - 1)).discard_result();
         return make_ready_future<>();
+    }
+    future<> listen(socket_address addr, listen_options lo) {
+        return listen(engine().listen(addr, lo));
     }
     future<> listen(socket_address addr) {
         listen_options lo;
