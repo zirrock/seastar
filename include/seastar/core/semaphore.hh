@@ -27,6 +27,7 @@
 #include <exception>
 #include <seastar/core/timer.hh>
 #include <seastar/core/expiring_fifo.hh>
+#include <seastar/core/print.hh>
 
 namespace seastar {
 
@@ -65,6 +66,40 @@ struct semaphore_default_exception_factory {
     }
     static broken_semaphore broken() {
         return broken_semaphore();
+    }
+};
+
+class named_semaphore_timed_out : public semaphore_timed_out {
+    sstring _msg;
+public:
+    named_semaphore_timed_out(const char* msg) : _msg(format("Semaphore timed out: {}", msg)) {}
+    virtual const char* what() const noexcept {
+        return _msg.c_str();
+    }
+};
+
+class broken_named_semaphore : public broken_semaphore {
+    sstring _msg;
+public:
+    broken_named_semaphore(const char* msg) : _msg(format("Semaphore broken: {}", msg)) {}
+    virtual const char* what() const noexcept {
+        return _msg.c_str();
+    }
+};
+
+// A factory of semaphore exceptions that contain additional context: the semaphore name
+// Using strings directly as template parameters is not supported, so the semaphore name
+// needs to be wrapped in a structure, e.g.:
+// struct name { static constexpr const char* value = "file_opening_limit_semaphore"; };
+// auto sem = named_semaphore<name>(0);
+template<typename Name>
+GCC6_CONCEPT( requires requires (Name) { {Name::value} -> const char*; } )
+struct named_semaphore_exception_factory {
+    static named_semaphore_timed_out timeout() {
+        return named_semaphore_timed_out(Name::value);
+    }
+    static broken_named_semaphore broken() {
+        return broken_named_semaphore(Name::value);
     }
 };
 
@@ -494,6 +529,9 @@ with_semaphore(basic_semaphore<ExceptionFactory, Clock>& sem, size_t units, type
 /// default basic_semaphore specialization that throws semaphore specific exceptions
 /// on error conditions.
 using semaphore = basic_semaphore<semaphore_default_exception_factory>;
+
+template<typename Name>
+using named_semaphore = basic_semaphore<named_semaphore_exception_factory<Name>>;
 
 /// @}
 
