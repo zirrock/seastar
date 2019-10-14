@@ -51,6 +51,15 @@ const char* de_type_desc(directory_entry_type t)
     return nullptr;
 }
 
+void check_creating_tmpfile(sstring directory) {
+    struct stat st;
+    auto fdesc = file_desc::temporary(directory);
+    int r = ::fstat(fdesc.get(), &st);
+    throw_system_error_on(r == -1, "Running fstat on a tmp file failed");
+    // A proper anonymous temporary file should not be accessible via dentries
+    assert(st.st_nlink == 0);
+}
+
 int main(int ac, char** av) {
     class lister {
         file _f;
@@ -78,6 +87,7 @@ int main(int ac, char** av) {
         return engine().open_directory(".").then([] (file f) {
             auto l = make_lw_shared<lister>(std::move(f));
             return l->done().then([l] {
+                check_creating_tmpfile(".");
                 // ugly thing to keep *l alive
                 engine().exit(0);
             });

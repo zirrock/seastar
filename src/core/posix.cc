@@ -27,13 +27,8 @@ namespace seastar {
 
 file_desc
 file_desc::temporary(sstring directory) {
-    // FIXME: add O_TMPFILE support one day
-    directory += "/XXXXXX";
-    std::vector<char> templat(directory.c_str(), directory.c_str() + directory.size() + 1);
-    int fd = ::mkstemp(templat.data());
+    int fd = ::open(directory.c_str(), O_TMPFILE | O_RDWR, 0600);
     throw_system_error_on(fd == -1);
-    int r = ::unlink(templat.data());
-    throw_system_error_on(r == -1); // leaks created file, but what can we do?
     return file_desc(fd);
 }
 
