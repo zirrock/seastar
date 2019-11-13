@@ -27,6 +27,7 @@
 #include <exception>
 #include <seastar/core/timer.hh>
 #include <seastar/core/expiring_fifo.hh>
+#include <seastar/core/print.hh>
 
 namespace seastar {
 
@@ -65,6 +66,36 @@ struct semaphore_default_exception_factory {
     }
     static broken_semaphore broken() {
         return broken_semaphore();
+    }
+};
+
+class named_semaphore_timed_out : public semaphore_timed_out {
+    sstring _msg;
+public:
+    named_semaphore_timed_out(compat::string_view msg) : _msg(format("Semaphore timed out: {}", msg)) {}
+    virtual const char* what() const noexcept {
+        return _msg.c_str();
+    }
+};
+
+class broken_named_semaphore : public broken_semaphore {
+    sstring _msg;
+public:
+    broken_named_semaphore(compat::string_view msg) : _msg(format("Semaphore broken: {}", msg)) {}
+    virtual const char* what() const noexcept {
+        return _msg.c_str();
+    }
+};
+
+// A factory of semaphore exceptions that contain additional context: the semaphore name
+// auto sem = named_semaphore(0, named_semaphore_exception_factory{"file_opening_limit_semaphore"});
+struct named_semaphore_exception_factory {
+    sstring name;
+    named_semaphore_timed_out timeout() {
+        return named_semaphore_timed_out(name);
+    }
+    broken_named_semaphore broken() {
+        return broken_named_semaphore(name);
     }
 };
 
