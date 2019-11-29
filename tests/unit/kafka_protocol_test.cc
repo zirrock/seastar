@@ -59,6 +59,88 @@ BOOST_AUTO_TEST_CASE(kafka_primitives_number_test) {
     BOOST_REQUIRE_EQUAL(*number, 0x12345678);
 }
 
+BOOST_AUTO_TEST_CASE(kafka_primitives_varint_test) {
+    kafka::kafka_varint_t number(155);
+
+    std::array<char, 1> data1{0x00};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream1(data1.begin(), data1.end());
+
+    number.deserialize(input_stream1, 0);
+    BOOST_REQUIRE_EQUAL(*number, 0);
+
+    std::array<char, 1> output_data1{0x05};
+    boost::iostreams::stream<boost::iostreams::array_sink> output_stream1(output_data1.begin(), output_data1.end());
+    number.serialize(output_stream1, 0);
+    BOOST_REQUIRE(!output_stream1.bad());
+
+    BOOST_TEST(output_data1 == data1, boost::test_tools::per_element());
+
+    std::array<char, 1> data2{0x08};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream2(data2.begin(), data2.end());
+
+    number.deserialize(input_stream2, 0);
+    BOOST_REQUIRE_EQUAL(*number, 4);
+
+    std::array<char, 1> data3{0x07};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream3(data3.begin(), data3.end());
+
+    number.deserialize(input_stream3, 0);
+    BOOST_REQUIRE_EQUAL(*number, -4);
+
+    std::array<char, 2> data4{static_cast<char>(0xAC), 0x02};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream4(data4.begin(), data4.end());
+
+    number.deserialize(input_stream4, 0);
+    BOOST_REQUIRE_EQUAL(*number, 150);
+
+    std::array<char, 2> output_data4{0x05, 0x05};
+    boost::iostreams::stream<boost::iostreams::array_sink> output_stream4(output_data4.begin(), output_data4.end());
+    number.serialize(output_stream4, 0);
+    BOOST_REQUIRE(!output_stream4.bad());
+
+    BOOST_TEST(output_data4 == data4, boost::test_tools::per_element());
+
+    std::array<char, 2> data5{static_cast<char>(0xAB), 0x02};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream5(data5.begin(), data5.end());
+
+    number.deserialize(input_stream5, 0);
+    BOOST_REQUIRE_EQUAL(*number, -150);
+
+    std::array<char, 2> output_data5{0x05, 0x05};
+    boost::iostreams::stream<boost::iostreams::array_sink> output_stream5(output_data5.begin(), output_data5.end());
+    number.serialize(output_stream5, 0);
+    BOOST_REQUIRE(!output_stream5.bad());
+
+    BOOST_TEST(output_data5 == data5, boost::test_tools::per_element());
+
+    std::array<char, 1> data_short{static_cast<char>(0xAC)};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream_short(data_short.begin(), data_short.end());
+
+    BOOST_REQUIRE_THROW(number.deserialize(input_stream_short, 0), kafka::parsing_exception);
+    BOOST_REQUIRE_EQUAL(*number, -150);
+
+    std::array<char, 5> data_big{static_cast<char>(0xFF), static_cast<char>(0xFF),
+                                 static_cast<char>(0xFF), static_cast<char>(0xFF), 0xF};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream_big(data_big.begin(), data_big.end());
+
+    number.deserialize(input_stream_big, 0);
+    BOOST_REQUIRE_EQUAL(*number, -2147483648);
+
+    std::array<char, 5> output_data_big{};
+    boost::iostreams::stream<boost::iostreams::array_sink> output_stream_big(output_data_big.begin(), output_data_big.end());
+    number.serialize(output_stream_big, 0);
+    BOOST_REQUIRE(!output_stream_big.bad());
+
+    BOOST_TEST(output_data_big == data_big, boost::test_tools::per_element());
+
+    std::array<char, 5> data_too_big{static_cast<char>(0xFF), static_cast<char>(0xFF),
+                                 static_cast<char>(0xFF), static_cast<char>(0xFF), 0x1F};
+    boost::iostreams::stream<boost::iostreams::array_source> input_stream_too_big(data_too_big.begin(), data_too_big.end());
+
+    BOOST_REQUIRE_THROW(number.deserialize(input_stream_too_big, 0), kafka::parsing_exception);
+    BOOST_REQUIRE_EQUAL(*number, -2147483648);
+}
+
 BOOST_AUTO_TEST_CASE(kafka_primitives_string_test) {
     kafka::kafka_string_t string("321");
     BOOST_REQUIRE_EQUAL(*string, "321");
