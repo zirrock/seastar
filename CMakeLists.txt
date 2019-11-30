@@ -575,6 +575,7 @@ add_library (seastar STATIC
   src/json/json_elements.cc
   src/kafka/protocol/api_versions_response.cc
   src/kafka/protocol/api_versions_request.cc
+  src/kafka/protocol/kafka_records.cc
   src/kafka/protocol/metadata_response.cc
   src/kafka/protocol/metadata_request.cc
   src/net/arp.cc
