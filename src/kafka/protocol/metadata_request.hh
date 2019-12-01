@@ -62,7 +62,7 @@ public:
 
     [[nodiscard]] const kafka_bool_t &get_include_topic_authorized_operations() const;
 
-    void _set_include_topic_authorized_operations(const kafka_bool_t &includeTopicAuthorizedOperations);
+    void set_include_topic_authorized_operations(const kafka_bool_t &includeTopicAuthorizedOperations);
 
     void serialize(std::ostream &os, int16_t api_version) const;
 

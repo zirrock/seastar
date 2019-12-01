@@ -93,7 +93,7 @@ const kafka_bool_t &metadata_request::get_include_topic_authorized_operations() 
     return _include_topic_authorized_operations;
 }
 
-void metadata_request::_set_include_topic_authorized_operations(const kafka_bool_t &includeTopicAuthorizedOperations) {
+void metadata_request::set_include_topic_authorized_operations(const kafka_bool_t &includeTopicAuthorizedOperations) {
     _include_topic_authorized_operations = includeTopicAuthorizedOperations;
 }
 
