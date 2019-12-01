@@ -583,6 +583,7 @@ add_library (seastar STATIC
   src/kafka/protocol/metadata_request.cc
   src/kafka/protocol/produce_response.cc
   src/kafka/protocol/produce_request.cc
+  src/kafka/producer/kafka_producer.cc
   src/net/arp.cc
   src/net/config.cc
   src/net/dhcp.cc
