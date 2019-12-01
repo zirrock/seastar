@@ -28,13 +28,14 @@ using namespace seastar;
 
 // All of the tests below assume that there is a Kafka broker running
 // on address BROKER_ADDRESS
-constexpr char BROKER_ADDRESS[] = "172.13.0.1:9092";
+constexpr char BROKER_ADDRESS[] = "172.13.0.1";
+constexpr uint16_t PORT = 9092;
 
 constexpr char message_str[] = "\x00\x00\x00\x0E\x00\x12\x00\x02\x00\x00\x00\x00\x00\x04\x74\x65\x73\x74";
-constexpr size_t message_len = 18;
+constexpr size_t message_len = sizeof(message_str);
 
 SEASTAR_TEST_CASE(kafka_establish_connection_test) {
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then([] (lw_shared_ptr<kafka::tcp_connection> conn) {
+    return kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).then([] (lw_shared_ptr<kafka::tcp_connection> conn) {
        return conn->close().finally([conn] {});
     }).then_wrapped([] (auto&& f) {
         try {
@@ -48,7 +49,7 @@ SEASTAR_TEST_CASE(kafka_establish_connection_test) {
 SEASTAR_TEST_CASE(kafka_connection_write_without_errors_test) {
     temporary_buffer<char> message {message_str, message_len};
 
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then([message = std::move(message)] (lw_shared_ptr<kafka::tcp_connection> conn) {
+    return kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).then([message = std::move(message)] (lw_shared_ptr<kafka::tcp_connection> conn) {
         return conn->write(message.clone()).then([conn] {
             return conn->close().finally([conn] {});
         });
@@ -89,7 +90,7 @@ SEASTAR_TEST_CASE(kafka_connection_successful_write_read_routine_test) {
 
     temporary_buffer<char> message {message_str, message_len};
 
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then(
+    return kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).then(
         [message = std::move(message), correct_response] (lw_shared_ptr<kafka::tcp_connection> conn) {
             return conn->write(message.clone()).then([conn, correct_response] {
                 return conn->read(18 * 16).then([conn, correct_response] (temporary_buffer<char> buff) {

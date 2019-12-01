@@ -20,19 +20,21 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
-#include <iostream>
 #include "tcp_connection.hh"
 
 namespace seastar {
 
 namespace kafka {
 
-future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string& address) {
-    ipv4_addr target_addr = ipv4_addr{address};
-    socket_address socket = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-    return engine().net().connect(make_ipv4_address(target_addr), socket, transport::TCP).then(
-            [target_addr = std::move(target_addr)] (connected_socket fd) {
-                return make_lw_shared<tcp_connection>(target_addr, std::move(fd));
+future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string& host, uint16_t port) {
+    net::inet_address target_host = net::inet_address{host};
+    sa_family_t family = target_host.is_ipv4() ? sa_family_t(AF_INET) : sa_family_t(AF_INET6);
+    socket_address socket = socket_address(::sockaddr_in{family, INADDR_ANY, {0}});
+    auto f = target_host.is_ipv4()
+            ? engine().net().connect(ipv4_addr{target_host, port}, socket, transport::TCP)
+            : engine().net().connect(ipv6_addr{target_host, port}, socket, transport::TCP);
+    return f.then([target_host = std::move(target_host), port] (connected_socket fd) {
+                return make_lw_shared<tcp_connection>(target_host, port, std::move(fd));
             }
     );
 }
@@ -48,8 +50,8 @@ future<> tcp_connection::write(temporary_buffer<char> buff) {
 }
 
 future<> tcp_connection::close() {
-    return _read_buf.close().then([this] {
-        return _write_buf.close();
+    return when_all(_read_buf.close(), _write_buf.close()).then([] (auto) {
+        return make_ready_future();
     });
 }
 
