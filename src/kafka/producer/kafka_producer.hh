@@ -34,23 +34,24 @@ namespace seastar {
 
 namespace kafka {
 
-namespace producer {
-
 class kafka_producer {
-
 private:
-  std::string _client_id;
-  int32_t _correlation_id;
-  connected_socket _socket;
-  lw_shared_ptr<tcp_connection> _connection;
+    std::string _client_id;
+    int32_t _correlation_id;
+    connected_socket _socket;
+    lw_shared_ptr<tcp_connection> _connection;
+
+    seastar::future<int32_t> send_request(int16_t api_key, int16_t api_version,
+            const char *payload, size_t payload_length);
+
+    seastar::future<temporary_buffer<char>> receive_response();
 
 public:
-  kafka_producer(std::string client_id);
-  seastar::future<> start(std::string server_address);
+    kafka_producer(std::string client_id);
+    seastar::future<> init(std::string server_address, uint16_t port);
+    seastar::future<> produce(std::string topic_name, std::string key, std::string value, int32_t partition_index);
 };
 
-} // producer
+}
 
-} // kafka
-
-} // seastar
+}
