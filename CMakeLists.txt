@@ -574,6 +574,8 @@ add_library (seastar STATIC
   src/http/transformers.cc
   src/json/formatter.cc
   src/json/json_elements.cc
+  src/kafka/producer/kafka_producer.hh
+  src/kafka/producer/kafka_producer.cc
   src/net/arp.cc
   src/net/config.cc
   src/net/dhcp.cc
