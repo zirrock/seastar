@@ -54,15 +54,15 @@ public:
 };
 
 enum kafka_record_compression_type {
-    NO_COMPRESSION, GZIP, SNAPPY, LZ4, ZSTD
+    NO_COMPRESSION = 0, GZIP = 1, SNAPPY = 2, LZ4 = 3, ZSTD = 4
 };
 
 enum kafka_record_timestamp_type {
-    CREATE_TIME, LOG_APPEND_TIME
+    CREATE_TIME = 0, LOG_APPEND_TIME = 1
 };
 
 class kafka_record_batch {
-private:
+public:
     kafka_int64_t _base_offset;
     kafka_int32_t _partition_leader_epoch;
     kafka_int8_t _magic;
@@ -78,8 +78,10 @@ private:
     kafka_int32_t _base_sequence;
 
     std::vector<kafka_record> _records;
-public:
 
+    void serialize(std::ostream &os, int16_t api_version) const;
+
+    void deserialize(std::istream &is, int16_t api_version);
 };
 
 class kafka_records {
