@@ -22,6 +22,8 @@
 #include <iostream>
 #include <seastar/core/app-template.hh>
 #include <seastar/core/print.hh>
+#include <seastar/core/thread.hh>
+#include "../src/kafka/producer/kafka_producer.hh"
 
 using namespace seastar;
 
@@ -30,36 +32,38 @@ namespace bpo = boost::program_options;
 int main(int ac, char** av) {
     app_template app;
     app.add_options()
-        ("host", bpo::value<std::string>()->default_value("172.13.0.0"), "Address of the Kafka broker")
+        ("host", bpo::value<std::string>()->default_value("172.13.0.1"), "Address of the Kafka broker")
         ("port", bpo::value<uint16_t>()->default_value(9092), "Port to connect through");
 
     return app.run(ac, av, [&app] {
-        auto&& config = app.configuration();
-        std::string host = config["host"].as<std::string>();
-        uint16_t port = config["port"].as<uint16_t>();
-        (void)port;
+        return seastar::async([&app] {
+            auto &&config = app.configuration();
+            std::string host = config["host"].as<std::string>();
+            uint16_t port = config["port"].as<uint16_t>();
+            (void) port;
 
-        // TODO: Create and init the producer
-        fprint(std::cout, "Producer initialized and ready to send\n\n");
+            kafka::kafka_producer producer("seastar-kafka-demo");
+            producer.init(host, port).wait();
+            fprint(std::cout, "Producer initialized and ready to send\n\n");
 
-        std::string topic, message;
-        while (true) {
-            fprint(std::cout, "\nType the topic and the message you want to send below. If you want to quit type 'q'\n");
-            fprint(std::cout, "Enter topic: ");
-            std::cin >> topic;
+            std::string topic, message;
+            while (true) {
+                fprint(std::cout,
+                       "\nType the topic and the message you want to send below. If you want to quit type 'q'\n");
+                fprint(std::cout, "Enter topic: ");
+                std::cin >> topic;
 
-            if (topic == "q") {
-                // TODO: Close connections? Depending on whether the producer uses RAII for that
-                fprint(std::cout, "Finished succesfully!\n");
-                break;
+                if (topic == "q") {
+                    // TODO: Close connections? Depending on whether the producer uses RAII for that
+                    fprint(std::cout, "Finished succesfully!\n");
+                    break;
+                }
+
+                fprint(std::cout, "Enter message: ");
+                std::cin >> message;
+
+                producer.produce(topic, message, message, 0).wait();
             }
-
-            fprint(std::cout, "Enter message: ");
-            std::cin >> message;
-            
-            // TODO: Producer.send()
-        }
-
-        return make_ready_future();
+        });
     });
 }

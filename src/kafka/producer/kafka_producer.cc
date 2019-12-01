@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <vector>
+#include <iostream>
 
 #include "../protocol/kafka_primitives.hh"
 #include "../protocol/metadata_request.hh"
@@ -29,9 +30,12 @@
 #include "../protocol/api_versions_request.hh"
 #include "../protocol/api_versions_response.hh"
 #include "../connection/tcp_connection.hh"
+#include "../protocol/produce_request.hh"
+#include "../protocol/produce_response.hh"
 
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/array.hpp>
 
 #include "kafka_producer.hh"
 
@@ -39,67 +43,151 @@ namespace seastar {
 
 namespace kafka {
 
-namespace producer {
-
-char api_request_serialized_tmp[20] =
-  "\x00\x00\x00\x0E\x00\x12\x00\x02\x00\x00\x00\x00\x00\x04\x74\x65\x73\x74";
-
-char metadata_request_header_serialized_tmp[20] =
-  "\x00\x00\x00\x00\x00\x03\x00\x02\x00\x00\x00\x01\x00\x04\x74\x65\x73\x74";
-
 kafka_producer::kafka_producer(std::string client_id) {
-  _correlation_id = 0;
-  _client_id = client_id;
+    _correlation_id = 0;
+    _client_id = client_id;
 }
 
-seastar::future<> kafka_producer::start(std::string server_address) {
-  // establish connection
-  //int16_t api_request_api = 2;
-  //int16_t metadata_request_api = 2;
-  future<lw_shared_ptr<tcp_connection> > connected =
-    tcp_connection::connect(server_address);
-  return connected.then([this](lw_shared_ptr<tcp_connection> conn) {
-      _connection = conn;
-      temporary_buffer<char> buff(
-        api_request_serialized_tmp,
-        sizeof(api_request_serialized_tmp));
-      return conn->write(std::move(buff)).then([conn]() {
-        return conn->read(4).then([conn](temporary_buffer<char> message_len) {
-          return conn->read(std::stoi(std::string(message_len.get(), 4)))
-            .then([conn](temporary_buffer<char> message){
-            std::stringstream s;
-            //int32_t correlation_id = std::stoi(std::string(message.get(), 4));
-            api_versions_response api_response;
-            s << (message.get() + 4);
-            api_response.deserialize(s, 2); // TODO pass api
-            // TODO save information
-            metadata_request metadata_request;
-            std::vector<char> new_message;
-            boost::iostreams::back_insert_device<std::vector<char>> message_sink{new_message};
-            boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> message_stream{message_sink};
-            metadata_request_topic request_topic;
-            kafka_string_t topic(kafka_string_t("Test"));
-            request_topic.set_name(topic);
-            kafka_array_t<metadata_request_topic> topics{std::vector<metadata_request_topic>()};
-            topics->push_back(request_topic);
-            metadata_request.set_topics(topics);
-            metadata_request.set_allow_auto_topic_creation(kafka_bool_t(true));
-            metadata_request.set_include_cluster_authorized_operations(kafka_bool_t(true));
-            metadata_request.set_include_topic_authorized_operations(kafka_bool_t(true));
-            message_stream.flush();
-            int32_t request_size = sizeof(metadata_request_header_serialized_tmp + message.size());
-            message_stream.write(reinterpret_cast<char*>(&request_size), 2);
-            message_stream.write(metadata_request_header_serialized_tmp, sizeof(metadata_request_header_serialized_tmp));
-            metadata_request.serialize(message_stream, 2);
-            return conn->write(temporary_buffer<char> (new_message.data(), new_message.size()));
-          });
-        });
-      });
+seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
+    auto connection_future = tcp_connection::connect(server_address, port).then([this] (auto connection) {
+        _connection = connection;
+    });
+
+    // TODO ApiVersions, Metadata
+
+    return connection_future;
+}
+
+seastar::future<int32_t>
+kafka_producer::send_request(int16_t api_key, int16_t api_version, const char *payload, size_t payload_length) {
+    std::vector<char> header;
+    boost::iostreams::back_insert_device<std::vector<char>> header_sink{header};
+    boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> header_stream{header_sink};
+
+    auto assigned_correlation_id = _correlation_id++;
+
+    kafka::kafka_int16_t api_key_kafka(api_key);
+    api_key_kafka.serialize(header_stream, 0);
+    kafka::kafka_int16_t api_version_kafka(api_version);
+    api_version_kafka.serialize(header_stream, 0);
+    kafka::kafka_int32_t correlation_id(assigned_correlation_id);
+    correlation_id.serialize(header_stream, 0);
+    kafka::kafka_nullable_string_t client_id(_client_id);
+    client_id.serialize(header_stream, 0);
+
+    header_stream.flush();
+
+    auto message_size = header.size() + payload_length;
+
+    std::vector<char> message;
+    boost::iostreams::back_insert_device<std::vector<char>> message_sink{message};
+    boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> message_stream{message_sink};
+
+    kafka_int32_t size(message_size);
+    size.serialize(message_stream, 0);
+    message_stream.write(header.data(), header.size());
+    message_stream.write(payload, payload_length);
+    message_stream.flush();
+
+    temporary_buffer<char> message_buffer{message.data(), message.size()};
+    return _connection->write(message_buffer.clone())
+    .then([assigned_correlation_id] { return assigned_correlation_id; });
+}
+
+future<temporary_buffer<char>> kafka_producer::receive_response() {
+    return _connection->read(4).then([] (temporary_buffer<char> response) {
+        boost::iostreams::stream<boost::iostreams::array_source> response_size_stream
+                (response.get(), response.size());
+
+        kafka::kafka_int32_t response_size;
+        response_size.deserialize(response_size_stream, 0);
+        return *response_size;
+    }).then([this] (int32_t response_size) {
+        return _connection->read(response_size);
     });
 }
 
-} // producer
+seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value, int32_t partition_index) {
+    kafka::produce_request req;
+    req.set_acks(kafka::kafka_int16_t(-1));
+    req.set_timeout_ms(kafka::kafka_int32_t(30000));
 
-} // kafka
+    kafka::produce_request_topic_produce_data topic_data;
+    topic_data.set_name(kafka::kafka_string_t(topic_name));
 
-} // seastar
+    kafka::produce_request_partition_produce_data partition_data;
+    partition_data.set_partition_index(kafka::kafka_int32_t(partition_index));
+
+    kafka::kafka_records records;
+    kafka::kafka_record_batch record_batch;
+
+    record_batch._base_offset = 0;
+    record_batch._partition_leader_epoch = -1;
+    record_batch._magic = 2;
+    record_batch._compression_type = kafka::kafka_record_compression_type::NO_COMPRESSION;
+    record_batch._timestamp_type = kafka::kafka_record_timestamp_type::CREATE_TIME;
+    record_batch._first_timestamp = 0x16e5b6eba2c; // TODO it should be a real time
+    record_batch._producer_id = -1;
+    record_batch._producer_epoch = -1;
+    record_batch._base_sequence = -1;
+    record_batch._is_transactional = false;
+    record_batch._is_control_batch = false;
+
+    kafka::kafka_record record;
+    record._timestamp_delta = 0;
+    record._offset_delta = 0;
+    record._key = key;
+    record._value = value;
+
+    record_batch._records.push_back(record);
+    records._record_batches.push_back(record_batch);
+
+    partition_data.set_records(records);
+
+    kafka::kafka_array_t<kafka::produce_request_partition_produce_data> partitions{
+            std::vector<kafka::produce_request_partition_produce_data>()};
+    partitions->push_back(partition_data);
+    topic_data.set_partitions(partitions);
+
+    kafka::kafka_array_t<kafka::produce_request_topic_produce_data> topics{
+            std::vector<kafka::produce_request_topic_produce_data>()};
+    topics->push_back(topic_data);
+
+    req.set_topics(topics);
+
+    std::vector<char> serialized;
+    boost::iostreams::back_insert_device<std::vector<char>> serialized_sink{serialized};
+    boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> serialized_stream{serialized_sink};
+
+    req.serialize(serialized_stream, 7); // todo hardcoded version 7
+    serialized_stream.flush();
+
+    auto send_future = send_request(0, 7, serialized.data(), serialized.size()).discard_result();
+
+    auto response_future = send_future.then([this] {
+        return receive_response();
+    }).then([] (temporary_buffer<char> response) {
+        boost::iostreams::stream<boost::iostreams::array_source> response_stream
+                (response.get(), response.size());
+
+        kafka::kafka_int32_t correlation_id;
+        correlation_id.deserialize(response_stream, 0);
+
+        printf("received correlation id of: %d\n", *correlation_id);
+
+        kafka::produce_response produce_response;
+        produce_response.deserialize(response_stream, 7);
+
+        printf("response has error code of: %d\n",
+               *produce_response.get_responses()[0].get_partitions()[0].get_error_code());
+
+        printf("response has base offset of: %ld\n",
+               *produce_response.get_responses()[0].get_partitions()[0].get_base_offset());
+    });
+
+    return response_future;
+}
+
+}
+
+}

@@ -22,11 +22,16 @@
 
 #pragma once
 
+#include <iostream>
+
 namespace seastar {
 
 namespace kafka {
 
 class api_versions_request {
+    void serialize(std::ostream &os, int16_t api_version) const;
+
+    void deserialize(std::istream &is, int16_t api_version);
 };
 
 }
