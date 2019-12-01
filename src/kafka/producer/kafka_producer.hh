@@ -20,7 +20,15 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
- #pragma once
+#pragma once
+
+#include <string>
+
+
+#include "../connection/tcp_connection.hh"
+
+#include <seastar/core/future.hh>
+#include <seastar/net/net.hh>
 
 namespace seastar {
 
@@ -31,13 +39,15 @@ namespace producer {
 class kafka_producer {
 
 private:
-  string _client_id;
+  std::string _client_id;
   int32_t _correlation_id;
+  connected_socket _socket;
+  lw_shared_ptr<tcp_connection> _connection;
 
 public:
-  kafka_producer();
-  seastar::future<> start(server_address);
-}
+  kafka_producer(std::string client_id);
+  seastar::future<> start(std::string server_address);
+};
 
 } // producer
 
