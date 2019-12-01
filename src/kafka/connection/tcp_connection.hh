@@ -24,42 +24,37 @@
 
 #include <seastar/core/future.hh>
 #include <seastar/net/net.hh>
+#include <seastar/net/inet_address.hh>
 #include <string>
 
 namespace seastar {
 
-namespace kafka
-{
+namespace kafka {
 
-class tcp_connection
-{
+class tcp_connection {
+
+    net::inet_address _host;
+    uint16_t _port;
+    connected_socket _fd;
+    input_stream<char> _read_buf;
+    output_stream<char> _write_buf;
 
 public:
 
-    tcp_connection(const ipv4_addr& addr, connected_socket&& fd) noexcept
-            : _target_addr(addr)
+    static future<lw_shared_ptr<tcp_connection>> connect(const std::string& host, uint16_t port);
+
+    tcp_connection(const net::inet_address& host, uint16_t port, connected_socket&& fd) noexcept
+            : _host(host)
+            , _port(port)
             , _fd(std::move(fd))
             , _read_buf(_fd.input())
             , _write_buf(_fd.output()) {};
 
-    tcp_connection(tcp_connection&& other) noexcept
-        : _target_addr(other._target_addr)
-        , _fd(std::move(other._fd))
-        , _read_buf(std::move(other._read_buf))
-        , _write_buf(std::move(other._write_buf)) {};
-
-    static future<lw_shared_ptr<tcp_connection>> connect(const std::string& address);
+    tcp_connection(tcp_connection&& other) = default;
 
     future<> write(temporary_buffer<char> buff);
     future<temporary_buffer<char>> read(size_t bytes);
     future<> close();
-
-private:
-
-    ipv4_addr _target_addr;
-    connected_socket _fd;
-    input_stream<char> _read_buf;
-    output_stream<char> _write_buf;
 
 };
 
