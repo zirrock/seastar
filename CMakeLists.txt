@@ -557,6 +557,7 @@ add_library (seastar STATIC
   src/core/scollectd.cc
   src/core/scollectd-impl.hh
   src/core/systemwide_memory_barrier.cc
+  src/core/smp.cc
   src/core/thread.cc
   src/core/uname.cc
   src/core/vla.hh
@@ -573,6 +574,8 @@ add_library (seastar STATIC
   src/http/transformers.cc
   src/json/formatter.cc
   src/json/json_elements.cc
+  src/kafka/connection/tcp_connection.hh
+  src/kafka/connection/tcp_connection.cc
   src/kafka/protocol/api_versions_response.cc
   src/kafka/protocol/api_versions_request.cc
   src/kafka/protocol/kafka_records.cc
