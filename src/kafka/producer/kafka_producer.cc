@@ -53,9 +53,11 @@ seastar::future<> kafka_producer::init(std::string server_address, uint16_t port
         _connection = connection;
     });
 
-    // TODO ApiVersions, Metadata
+    // TODO ApiVersions
 
-    return connection_future;
+    return connection_future.then([this] {
+        return refresh_metadata();
+    });
 }
 
 seastar::future<int32_t>
@@ -183,6 +185,47 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
 
         printf("response has base offset of: %ld\n",
                *produce_response.get_responses()[0].get_partitions()[0].get_base_offset());
+    });
+
+    return response_future;
+}
+
+seastar::future<> kafka_producer::refresh_metadata() {
+    kafka::metadata_request req;
+
+    req.set_allow_auto_topic_creation(kafka_bool_t(true));
+    req.set_include_cluster_authorized_operations(kafka_bool_t(true));
+    req.set_include_topic_authorized_operations(kafka_bool_t(true));
+
+    std::vector<char> serialized;
+    boost::iostreams::back_insert_device<std::vector<char>> serialized_sink{serialized};
+    boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> serialized_stream{serialized_sink};
+    req.serialize(serialized_stream, 8); // todo hardcoded version 8
+    serialized_stream.flush();
+
+    auto send_future = send_request(3, 8, serialized.data(), serialized.size()).discard_result();
+
+    auto response_future = send_future.then([this] {
+        return receive_response();
+    }).then([] (temporary_buffer<char> response) {
+        boost::iostreams::stream<boost::iostreams::array_source> response_stream
+                (response.get(), response.size());
+
+        kafka::kafka_int32_t correlation_id;
+        correlation_id.deserialize(response_stream, 0);
+
+        printf("received correlation id of: %d\n", *correlation_id);
+
+        kafka::metadata_response metadata_response;
+        metadata_response.deserialize(response_stream, 8);
+
+        for (const auto& broker : *metadata_response.get_brokers()) {
+            printf("Broker: %s:%d\n", broker.get_host()->c_str(), *broker.get_port());
+        }
+
+        for (const auto& topic : *metadata_response.get_topics()) {
+            printf("Topic: %s\n", topic.get_name()->c_str());
+        }
     });
 
     return response_future;
