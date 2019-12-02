@@ -46,6 +46,8 @@ private:
 
     seastar::future<temporary_buffer<char>> receive_response();
 
+    seastar::future<> refresh_metadata();
+
 public:
     kafka_producer(std::string client_id);
     seastar::future<> init(std::string server_address, uint16_t port);
