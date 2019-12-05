@@ -111,14 +111,14 @@ future<temporary_buffer<char>> kafka_producer::receive_response() {
 
 seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value, int32_t partition_index) {
     kafka::produce_request req;
-    req.set_acks(kafka::kafka_int16_t(-1));
-    req.set_timeout_ms(kafka::kafka_int32_t(30000));
+    req._acks = -1;
+    req._timeout_ms = 30000;
 
     kafka::produce_request_topic_produce_data topic_data;
-    topic_data.set_name(kafka::kafka_string_t(topic_name));
+    topic_data._name = topic_name;
 
     kafka::produce_request_partition_produce_data partition_data;
-    partition_data.set_partition_index(kafka::kafka_int32_t(partition_index));
+    partition_data._partition_index = partition_index;
 
     kafka::kafka_records records;
     kafka::kafka_record_batch record_batch;
@@ -144,18 +144,18 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     record_batch._records.push_back(record);
     records._record_batches.push_back(record_batch);
 
-    partition_data.set_records(records);
+    partition_data._records = records;
 
     kafka::kafka_array_t<kafka::produce_request_partition_produce_data> partitions{
             std::vector<kafka::produce_request_partition_produce_data>()};
     partitions->push_back(partition_data);
-    topic_data.set_partitions(partitions);
+    topic_data._partitions = partitions;
 
     kafka::kafka_array_t<kafka::produce_request_topic_produce_data> topics{
             std::vector<kafka::produce_request_topic_produce_data>()};
     topics->push_back(topic_data);
 
-    req.set_topics(topics);
+    req._topics = topics;
 
     std::vector<char> serialized;
     boost::iostreams::back_insert_device<std::vector<char>> serialized_sink{serialized};
@@ -181,10 +181,10 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
         produce_response.deserialize(response_stream, 7);
 
         printf("response has error code of: %d\n",
-               *produce_response.get_responses()[0].get_partitions()[0].get_error_code());
+               *produce_response._responses[0]._partitions[0]._error_code);
 
         printf("response has base offset of: %ld\n",
-               *produce_response.get_responses()[0].get_partitions()[0].get_base_offset());
+               *produce_response._responses[0]._partitions[0]._base_offset);
     });
 
     return response_future;
@@ -193,9 +193,9 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
 seastar::future<> kafka_producer::refresh_metadata() {
     kafka::metadata_request req;
 
-    req.set_allow_auto_topic_creation(kafka_bool_t(true));
-    req.set_include_cluster_authorized_operations(kafka_bool_t(true));
-    req.set_include_topic_authorized_operations(kafka_bool_t(true));
+    req._allow_auto_topic_creation = true;
+    req._include_cluster_authorized_operations = true;
+    req._include_topic_authorized_operations = true;
 
     std::vector<char> serialized;
     boost::iostreams::back_insert_device<std::vector<char>> serialized_sink{serialized};
@@ -219,12 +219,12 @@ seastar::future<> kafka_producer::refresh_metadata() {
         kafka::metadata_response metadata_response;
         metadata_response.deserialize(response_stream, 8);
 
-        for (const auto& broker : *metadata_response.get_brokers()) {
-            printf("Broker: %s:%d\n", broker.get_host()->c_str(), *broker.get_port());
+        for (const auto& broker : *metadata_response._brokers) {
+            printf("Broker: %s:%d\n", broker._host->c_str(), *broker._port);
         }
 
-        for (const auto& topic : *metadata_response.get_topics()) {
-            printf("Topic: %s\n", topic.get_name()->c_str());
+        for (const auto& topic : *metadata_response._topics) {
+            printf("Topic: %s\n", topic._name->c_str());
         }
     });
 
