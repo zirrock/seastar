@@ -20,7 +20,7 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
-#include <seastar/testing/test_case.hh>
+#include <seastar/testing/thread_test_case.hh>
 #include <seastar/testing/test_runner.hh>
 #include "../../src/kafka/connection/tcp_connection.hh"
 
@@ -28,44 +28,29 @@ using namespace seastar;
 
 // All of the tests below assume that there is a Kafka broker running
 // on address BROKER_ADDRESS
-constexpr char BROKER_ADDRESS[] = "172.13.0.1:9092";
+constexpr char BROKER_ADDRESS[] = "172.13.0.1";
+constexpr uint16_t PORT = 9092;
 
 constexpr char message_str[] = "\x00\x00\x00\x0E\x00\x12\x00\x02\x00\x00\x00\x00\x00\x04\x74\x65\x73\x74";
-constexpr size_t message_len = 18;
+constexpr size_t message_len = sizeof(message_str);
 
-SEASTAR_TEST_CASE(kafka_establish_connection_test) {
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then([] (lw_shared_ptr<kafka::tcp_connection> conn) {
-       return conn->close().finally([conn] {});
-    }).then_wrapped([] (auto&& f) {
-        try {
-            f.get();
-        } catch (std::exception& ex) {
-            BOOST_FAIL(ex.what());
-        }
-    });
+SEASTAR_THREAD_TEST_CASE(kafka_establish_connection_test) {
+    kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).get();
 }
 
-SEASTAR_TEST_CASE(kafka_connection_write_without_errors_test) {
+SEASTAR_THREAD_TEST_CASE(kafka_connection_write_without_errors_test) {
     temporary_buffer<char> message {message_str, message_len};
 
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then([message = std::move(message)] (lw_shared_ptr<kafka::tcp_connection> conn) {
-        return conn->write(message.clone()).then([conn] {
-            return conn->close().finally([conn] {});
-        });
-    }).then_wrapped([] (auto&& f) {
-        try {
-            f.get();
-        } catch (std::exception& ex) {
-            BOOST_FAIL(ex.what());
-        }
-    });
+    auto conn = kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).get0();
+    conn->write(message.clone()).get();
+    conn->close().get();
 }
 
-SEASTAR_TEST_CASE(kafka_connection_read_without_errors_test) {
-    return make_ready_future();
+SEASTAR_THREAD_TEST_CASE(kafka_connection_read_without_errors_test) {
+    return;
 }
 
-SEASTAR_TEST_CASE(kafka_connection_successful_write_read_routine_test) {
+SEASTAR_THREAD_TEST_CASE(kafka_connection_successful_write_read_routine_test) {
     const std::string correct_response {"\x00\x00\x01\x1C\x00\x00\x00\x00\x00\x00\x00\x00\x00\x2d\x00\x00"
                                         "\x00\x00\x00\x07\x00\x01\x00\x00\x00\x0b\x00\x02\x00\x00\x00\x05"
                                         "\x00\x03\x00\x00\x00\x08\x00\x04\x00\x00\x00\x02\x00\x05\x00\x00"
@@ -89,22 +74,10 @@ SEASTAR_TEST_CASE(kafka_connection_successful_write_read_routine_test) {
 
     temporary_buffer<char> message {message_str, message_len};
 
-    return kafka::tcp_connection::connect(BROKER_ADDRESS).then(
-        [message = std::move(message), correct_response] (lw_shared_ptr<kafka::tcp_connection> conn) {
-            return conn->write(message.clone()).then([conn, correct_response] {
-                return conn->read(18 * 16).then([conn, correct_response] (temporary_buffer<char> buff) {
-                    std::string response {buff.get(), buff.size()};
-                    BOOST_CHECK_EQUAL(response, correct_response);
-                    return make_ready_future();
-                }).then([conn] {
-                    return conn->close().finally([conn] {});
-                });
-            });
-        }).then_wrapped([] (auto&& f) {
-        try {
-            f.get();
-        } catch (std::exception& ex) {
-            BOOST_FAIL(ex.what());
-        }
-    });
+    auto conn = kafka::tcp_connection::connect(BROKER_ADDRESS, PORT).get0();
+    conn->write(message.clone()).get();
+    auto buff = conn->read(correct_response.length()).get0();
+    std::string response {buff.get(), buff.size()};
+    BOOST_CHECK_EQUAL(response, correct_response);
+    conn->close().get();
 }
