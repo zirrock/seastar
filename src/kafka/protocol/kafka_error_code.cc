@@ -27,6 +27,25 @@ namespace seastar {
 namespace kafka {
 
 namespace error {
+
+  kafka_error_code::kafka_error_code (
+    int16_t error_code,
+    std::string error_message,
+    bool is_retriable,
+    bool is_invalid_metadata)
+    : _error_code(error_code),
+      _error_message(error_message),
+      _is_retriable(is_retriable),
+      _is_invalid_metadata(is_invalid_metadata) {
+        kafka_error_code::errors.insert(std::pair<int16_t, const kafka_error_code &>(error_code, *this));
+    }
+
+  std::unordered_map<int16_t, const kafka_error_code &> kafka_error_code::errors;
+
+  const kafka_error_code &kafka_error_code::get_error(int16_t value) {
+    return kafka_error_code::errors.at(value);
+  }
+
   const kafka_error_code kafka_error_code::kafka_error_code::UNKNOWN_SERVER_ERROR(
     -1,
     "The server experienced an unexpected error when processing the request.",
