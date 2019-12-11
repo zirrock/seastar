@@ -33,6 +33,7 @@
 #include "../../src/kafka/protocol/kafka_records.hh"
 #include "../../src/kafka/protocol/produce_request.hh"
 #include "../../src/kafka/protocol/produce_response.hh"
+#include "../../src/kafka/protocol/kafka_error_code.hh"
 
 using namespace seastar;
 
@@ -153,6 +154,18 @@ BOOST_AUTO_TEST_CASE(kafka_primitives_array_test) {
     BOOST_REQUIRE_EQUAL(strings->size(), 2);
     BOOST_REQUIRE_EQUAL(*strings[0], "abcde");
     BOOST_REQUIRE_EQUAL(*strings[1], "fg");
+}
+
+BOOST_AUTO_TEST_CASE(kafka_primitives_error_code_test) {
+  const kafka::error::kafka_error_code &error =
+    kafka::error::kafka_error_code::INVALID_FETCH_SIZE;
+  kafka::kafka_error_code_t error_code(error);
+  BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
+  BOOST_REQUIRE_EQUAL(error_code == error, true);
+  BOOST_REQUIRE_EQUAL(error_code != error, false);
+  test_deserialize_serialize({0x08}, error_code, 0);
+  BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
+  test_deserialize_throw({0xAC, 0x02}, error_code, 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_api_versions_response_parsing_test) {
@@ -431,7 +444,7 @@ BOOST_AUTO_TEST_CASE(kafka_produce_response_parsing_test) {
 
     BOOST_REQUIRE_EQUAL(response._responses->size(), 1);
     BOOST_REQUIRE_EQUAL(*response._throttle_time_ms, 0);
-    
+
     const auto &inner_response = response._responses[0];
     BOOST_REQUIRE_EQUAL(*inner_response._name, "test5");
     BOOST_REQUIRE_EQUAL(inner_response._partitions->size(), 1);
