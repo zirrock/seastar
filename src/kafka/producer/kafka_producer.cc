@@ -179,8 +179,8 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
         kafka::produce_response produce_response;
         produce_response.deserialize(response_stream, 7);
 
-        // fprint(std::cout, "response has error code of: %d\n",
-        // *produce_response._responses[0]._partitions[0]._error_code);
+        fprint(std::cout, "response has error code of: %d\n",
+        (*produce_response._responses[0]._partitions[0]._error_code)._error_code);
 
         fprint(std::cout, "response has base offset of: %ld\n",
                *produce_response._responses[0]._partitions[0]._base_offset);
