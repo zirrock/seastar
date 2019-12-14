@@ -112,13 +112,13 @@ public:
         std::array<char, NUMBER_SIZE> buffer{};
         is.read(buffer.data(), NUMBER_SIZE);
         if (is.gcount() != NUMBER_SIZE) {
-            throw parsing_exception();
+            throw parsing_exception("Stream ended prematurely when reading number");
         }
         _value = net::ntoh(*reinterpret_cast<int16_t *>(buffer.data()));
         try {
             error::kafka_error_code::get_error(_value);
         } catch (const std::out_of_range &e) {
-            throw parsing_exception();
+            throw parsing_exception("Error with such code does not exist");
         }
     }
 
