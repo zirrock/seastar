@@ -42,7 +42,7 @@ public:
 
 class metadata_response_partition {
 public:
-    kafka_int16_t _error_code;
+    kafka_error_code_t _error_code;
     kafka_int32_t _partition_index;
     kafka_int32_t _leader_id;
     kafka_int32_t _leader_epoch;

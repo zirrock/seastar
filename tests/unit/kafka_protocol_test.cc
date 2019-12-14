@@ -215,7 +215,10 @@ BOOST_AUTO_TEST_CASE(kafka_api_versions_response_parsing_test) {
     }, response, 2);
 
     BOOST_REQUIRE_EQUAL(*response._throttle_time_ms, 0);
-    BOOST_REQUIRE_EQUAL(*response._error_code, 0);
+    BOOST_REQUIRE_EQUAL(
+        kafka::kafka_error_code_t(kafka::error::kafka_error_code::OFFSET_OUT_OF_RANGE),
+        *response._error_code
+    );
     BOOST_REQUIRE_EQUAL(response._api_keys->size(), 45);
     BOOST_REQUIRE_EQUAL(*response._api_keys[0]._api_key, 0);
     BOOST_REQUIRE_EQUAL(*response._api_keys[0]._min_version, 0);
@@ -260,11 +263,17 @@ BOOST_AUTO_TEST_CASE(kafka_metadata_response_parsing_test) {
     BOOST_REQUIRE_EQUAL(*response._cluster_id, "kLZ5jPvDR0Cw1y41Af5HUg");
     BOOST_REQUIRE_EQUAL(*response._controller_id, 0x3e9);
     BOOST_REQUIRE_EQUAL(response._topics->size(), 1);
-    BOOST_REQUIRE_EQUAL(*response._topics[0]._error_code, 0);
+    BOOST_REQUIRE_EQUAL(
+        kafka::kafka_error_code_t(kafka::error::kafka_error_code::OFFSET_OUT_OF_RANGE),
+        *response._topics[0]._error_code
+    );
     BOOST_REQUIRE_EQUAL(*response._topics[0]._name, "test5");
     BOOST_REQUIRE(!*response._topics[0]._is_internal);
     BOOST_REQUIRE_EQUAL(response._topics[0]._partitions->size(), 1);
-    BOOST_REQUIRE_EQUAL(*response._topics[0]._partitions[0]._error_code, 0);
+    BOOST_REQUIRE_EQUAL(
+        kafka::kafka_error_code_t(kafka::error::kafka_error_code::OFFSET_OUT_OF_RANGE),
+        *response._topics[0]._partitions[0]._error_code
+    );
     BOOST_REQUIRE_EQUAL(*response._topics[0]._partitions[0]._partition_index, 0);
     BOOST_REQUIRE_EQUAL(*response._topics[0]._partitions[0]._leader_id, 0x3e9);
     BOOST_REQUIRE_EQUAL(*response._topics[0]._partitions[0]._leader_epoch, 0);
@@ -474,7 +483,10 @@ BOOST_AUTO_TEST_CASE(kafka_produce_response_parsing_test) {
 
     const auto &partition = inner_response._partitions[0];
     BOOST_REQUIRE_EQUAL(*partition._partition_index, 0);
-    BOOST_REQUIRE_EQUAL(*partition._error_code, 0);
+    BOOST_REQUIRE_EQUAL(
+        kafka::kafka_error_code_t(kafka::error::kafka_error_code::OFFSET_OUT_OF_RANGE),
+        *partition._error_code
+    );
     BOOST_REQUIRE_EQUAL(*partition._base_offset, 0x46);
     BOOST_REQUIRE_EQUAL(*partition._log_append_time_ms, -1);
     BOOST_REQUIRE_EQUAL(*partition._log_start_offset, 0);
