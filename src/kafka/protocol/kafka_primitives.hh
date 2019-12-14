@@ -90,7 +90,7 @@ public:
     kafka_error_code_t(const error::kafka_error_code &error) noexcept : _value(error._error_code) {}
 
     [[nodiscard]] const error::kafka_error_code &operator*() const noexcept {
-      return error::kafka_error_code::get_error(_value);
+        return error::kafka_error_code::get_error(_value);
     }
 
     kafka_error_code_t &operator=(const error::kafka_error_code& error) noexcept {
@@ -115,18 +115,18 @@ public:
         }
         _value = net::ntoh(*reinterpret_cast<int16_t *>(buffer.data()));
         try {
-          error::kafka_error_code::get_error(_value);
+            error::kafka_error_code::get_error(_value);
         } catch (const std::out_of_range &e) {
-          throw parsing_exception();
+            throw parsing_exception();
         }
     }
 
     bool operator==(const error::kafka_error_code &other) {
-      return other._error_code == this->_value;
+        return other._error_code == this->_value;
     }
 
     bool operator!=(const error::kafka_error_code &other) {
-      return ! (*this == other);
+        return ! (*this == other);
     }
 };
 
