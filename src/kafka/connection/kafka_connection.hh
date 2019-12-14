@@ -134,15 +134,15 @@ public:
                 std::rethrow_exception(ep);
             } catch (seastar::timed_out_error& e) {
                 typename RequestType::response_type response;
-                response._error_code = 7;
+                response._error_code = error::kafka_error_code::REQUEST_TIMED_OUT;
                 return response;
             } catch (parsing_exception& e) {
                 typename RequestType::response_type response;
-                response._error_code = 2;
+                response._error_code = error::kafka_error_code::CORRUPT_MESSAGE;
                 return response;
             } catch (...) {
                 typename RequestType::response_type response;
-                response._error_code = 13;
+                response._error_code = error::kafka_error_code::NETWORK_EXCEPTION;
                 return response;
             }
         });

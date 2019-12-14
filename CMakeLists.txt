@@ -574,6 +574,8 @@ add_library (seastar STATIC
   src/http/transformers.cc
   src/json/formatter.cc
   src/json/json_elements.cc
+  src/kafka/protocol/kafka_error_code.hh
+  src/kafka/protocol/kafka_error_code.cc
   src/kafka/connection/connection_manager.cc
   src/kafka/connection/kafka_connection.cc
   src/kafka/connection/tcp_connection.hh
