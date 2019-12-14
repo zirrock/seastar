@@ -41,7 +41,7 @@ public:
 
 class api_versions_response {
 public:
-    kafka_int16_t _error_code;
+    kafka_error_code_t _error_code;
     kafka_array_t<api_versions_response_key> _api_keys;
     kafka_int32_t _throttle_time_ms;
 
