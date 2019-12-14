@@ -87,7 +87,7 @@ private:
     static constexpr auto NUMBER_SIZE = sizeof(int16_t);
 
 public:
-    kafka_error_code_t() noexcept : _value(-1) {}
+    kafka_error_code_t() noexcept : _value(0) {}
     kafka_error_code_t(const error::kafka_error_code &error) noexcept : _value(error._error_code) {}
 
     [[nodiscard]] const error::kafka_error_code &operator*() const noexcept {

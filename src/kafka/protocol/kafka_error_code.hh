@@ -144,8 +144,8 @@ private:
     static std::unordered_map<int16_t, const kafka_error_code &> errors;
 };
 
-} //error
+}
 
-} // kafka
+}
 
-} // seastar
+}
