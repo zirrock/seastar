@@ -57,7 +57,7 @@ public:
 
 class metadata_response_topic {
 public:
-    kafka_int16_t _error_code;
+    kafka_error_code_t _error_code;
     kafka_string_t _name;
     kafka_bool_t _is_internal;
     kafka_array_t<metadata_response_partition> _partitions;

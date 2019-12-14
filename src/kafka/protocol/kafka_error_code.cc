@@ -52,6 +52,12 @@ const kafka_error_code kafka_error_code::kafka_error_code::UNKNOWN_SERVER_ERROR(
     false,
     false
 );
+const kafka_error_code kafka_error_code::kafka_error_code::NONE(
+    0,
+    "",
+    false,
+    false
+);
 const kafka_error_code kafka_error_code::OFFSET_OUT_OF_RANGE (
     1,
     "The requested offset is not within the range of offsets maintained by the server.",

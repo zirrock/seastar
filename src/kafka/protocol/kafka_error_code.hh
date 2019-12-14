@@ -25,6 +25,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <iostream>
 
 namespace seastar {
 
@@ -47,9 +48,10 @@ public:
         bool is_retriable,
         bool is_invalid_metadata);
 
-        static const kafka_error_code &get_error(int16_t value);
+    static const kafka_error_code &get_error(int16_t value);
 
     static const kafka_error_code UNKNOWN_SERVER_ERROR;
+    static const kafka_error_code NONE;
     static const kafka_error_code OFFSET_OUT_OF_RANGE;
     static const kafka_error_code CORRUPT_MESSAGE;
     static const kafka_error_code UNKNOWN_TOPIC_OR_PARTITION;
