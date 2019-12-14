@@ -157,15 +157,15 @@ BOOST_AUTO_TEST_CASE(kafka_primitives_array_test) {
 }
 
 BOOST_AUTO_TEST_CASE(kafka_primitives_error_code_test) {
-  const kafka::error::kafka_error_code &error =
-    kafka::error::kafka_error_code::INVALID_FETCH_SIZE;
-  kafka::kafka_error_code_t error_code(error);
-  BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
-  BOOST_REQUIRE_EQUAL(error_code == error, true);
-  BOOST_REQUIRE_EQUAL(error_code != error, false);
-  test_deserialize_serialize({0x08}, error_code, 0);
-  BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
-  test_deserialize_throw({0xAC, 0x02}, error_code, 0);
+    const kafka::error::kafka_error_code &error =
+        kafka::error::kafka_error_code::INVALID_FETCH_SIZE;
+    kafka::kafka_error_code_t error_code(error);
+        BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
+        BOOST_REQUIRE_EQUAL(error_code == error, true);
+        BOOST_REQUIRE_EQUAL(error_code != error, false);
+        test_deserialize_serialize({0x00, 0x04}, error_code, 0); //
+        BOOST_REQUIRE_EQUAL((*error_code)._error_code, 4);
+        test_deserialize_throw({0xAC, 0x02}, error_code, 0);
 }
 
 BOOST_AUTO_TEST_CASE(kafka_api_versions_response_parsing_test) {
