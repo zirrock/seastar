@@ -21,6 +21,8 @@
  */
 
 #include "metadata_manager.hh"
+#include <seastar/core/sleep.hh>
+#include <seastar/core/thread.hh>
 
 namespace seastar {
 
@@ -38,7 +40,18 @@ namespace kafka {
         });
     }
 
-    metadata_response& metadata_manager::get_metadata() {
+    seastar::future<> metadata_manager::refresh_coroutine() {
+        return seastar::async({}, [this]{
+            using namespace std::chrono_literals;
+            while(true) {
+                seastar::sleep(5s).get();
+                refresh_metadata().get();
+            }
+            return;
+        });
+    }
+
+    metadata_response &metadata_manager::get_metadata() {
         return _metadata;
     }
 }
