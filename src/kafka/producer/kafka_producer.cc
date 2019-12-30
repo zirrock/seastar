@@ -56,7 +56,8 @@ seastar::future<> kafka_producer::init(std::string server_address, uint16_t port
     // TODO ApiVersions
 
     return connection_future.discard_result().then([this] {
-        return _metadata_manager->refresh_coroutine().discard_result();
+        using namespace std::chrono_literals;
+        return _metadata_manager->refresh_coroutine(5s).discard_result();
     });
 }
 

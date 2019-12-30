@@ -40,11 +40,10 @@ namespace kafka {
         });
     }
 
-    seastar::future<> metadata_manager::refresh_coroutine() {
-        return seastar::async({}, [this]{
-            using namespace std::chrono_literals;
+    seastar::future<> metadata_manager::refresh_coroutine(std::chrono::seconds dur) {
+        return seastar::async({}, [this, dur]{
             while(true) {
-                seastar::sleep(5s).get();
+                seastar::sleep(dur).get();
                 refresh_metadata().get();
             }
             return;

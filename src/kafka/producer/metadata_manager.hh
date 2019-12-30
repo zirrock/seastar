@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include "../connection/connection_manager.hh"
 #include <seastar/core/future.hh>
 
@@ -39,7 +41,7 @@ public:
     metadata_manager(lw_shared_ptr<connection_manager>& manager)
     : _connection_manager(manager) {}
 
-    seastar::future<> refresh_coroutine();
+    seastar::future<> refresh_coroutine(std::chrono::seconds dur);
     seastar::future<metadata_response> refresh_metadata();
     metadata_response& get_metadata();
 
