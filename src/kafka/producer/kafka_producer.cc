@@ -56,7 +56,7 @@ seastar::future<> kafka_producer::init(std::string server_address, uint16_t port
     // TODO ApiVersions
 
     return connection_future.discard_result().then([this] {
-        return _metadata_manager->refresh_metadata().discard_result();
+        return _metadata_manager->refresh_coroutine().discard_result();
     });
 }
 
@@ -76,7 +76,7 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
     message._key = std::move(key);
     message._value = std::move(value);
     message._partition_index = partition_index;
-    
+
     auto send_future = message._promise.get_future();
     _batcher.queue_message(std::move(message));
     return send_future;
