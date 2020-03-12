@@ -646,7 +646,7 @@ set (Seastar_PRIVATE_CXX_FLAGS
   -fvisibility=hidden
   -UNDEBUG
   -Wall
-  -Werror
+ # -Werror
   -Wno-error=deprecated-declarations)
 
 if (Seastar_COMPRESS_DEBUG)

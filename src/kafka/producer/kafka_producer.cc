@@ -38,6 +38,7 @@
 #include <boost/iostreams/device/array.hpp>
 
 #include <seastar/core/print.hh>
+#include <seastar/core/thread.hh>
 #include <seastar/kafka/producer/kafka_producer.hh>
 
 namespace seastar {
@@ -52,12 +53,11 @@ kafka_producer::kafka_producer(std::string client_id)
 
 seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
     auto connection_future = _connection_manager->connect(server_address, port);
-
     // TODO ApiVersions
-
-    return connection_future.discard_result().then([this] {
-        using namespace std::chrono_literals;
-        return _metadata_manager->refresh_coroutine(5s).discard_result();
+    return connection_future.discard_result().then(
+        [this]{
+        _metadata_manager->start_refresh();
+        return _metadata_manager->refresh_metadata().discard_result();
     });
 }
 
@@ -85,6 +85,10 @@ seastar::future<> kafka_producer::produce(std::string topic_name, std::string ke
 
 seastar::future<> kafka_producer::flush() {
     return _batcher.flush();
+}
+
+seastar::future<> kafka_producer::disconnect() {
+    return seastar::async({}, [this] {return _metadata_manager->stop_refresh();});
 }
 
 }

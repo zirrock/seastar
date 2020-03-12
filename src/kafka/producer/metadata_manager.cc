@@ -42,16 +42,31 @@ namespace kafka {
 
     seastar::future<> metadata_manager::refresh_coroutine(std::chrono::seconds dur) {
         return seastar::async({}, [this, dur]{
-            while(true) {
-                seastar::sleep(dur).get();
+            while(_keep_refreshing) {
                 refresh_metadata().get();
+                try {
+                    seastar::sleep_abortable(dur, _stop_refresh).get();
+                } catch (seastar::sleep_aborted e) {}
             }
+            _refresh_finished.signal();
             return;
         });
     }
 
     metadata_response &metadata_manager::get_metadata() {
         return _metadata;
+    }
+
+    void metadata_manager::start_refresh() {
+        _keep_refreshing = true;
+        using namespace std::chrono_literals;
+        (void) refresh_coroutine(5s);
+    }
+
+    void metadata_manager::stop_refresh() {
+        _keep_refreshing = false;
+        _stop_refresh.request_abort();
+        _refresh_finished.wait(1).wait();
     }
 }
 

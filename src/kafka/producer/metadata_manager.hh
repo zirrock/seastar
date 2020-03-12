@@ -26,6 +26,7 @@
 
 #include "../connection/connection_manager.hh"
 #include <seastar/core/future.hh>
+#include <seastar/core/abort_source.hh>
 
 namespace seastar {
 
@@ -36,13 +37,18 @@ class metadata_manager {
 private:
     lw_shared_ptr<connection_manager> _connection_manager;
     metadata_response _metadata;
+    bool _keep_refreshing;
+    semaphore _refresh_finished;
+    abort_source _stop_refresh;
 
 public:
     metadata_manager(lw_shared_ptr<connection_manager>& manager)
-    : _connection_manager(manager) {}
+    : _connection_manager(manager), _refresh_finished(0) {}
 
     seastar::future<> refresh_coroutine(std::chrono::seconds dur);
     seastar::future<metadata_response> refresh_metadata();
+    void start_refresh();
+    void stop_refresh();
     metadata_response& get_metadata();
 
 };
