@@ -43,7 +43,7 @@ private:
 
     std::string _client_id;
     lw_shared_ptr<connection_manager> _connection_manager;
-    partitioner _partitioner;
+    std::unique_ptr<partitioner> _partitioner;
     lw_shared_ptr<metadata_manager> _metadata_manager;
     batcher _batcher;
     lw_shared_ptr<seastar::future<>> _refresh_coroutine_handle;
