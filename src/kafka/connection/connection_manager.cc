@@ -49,7 +49,6 @@ future<> connection_manager::disconnect(const connection_id& connection) {
     auto conn = _connections.find(connection);
     if (conn != _connections.end()) {
         auto conn_ptr = conn->second;
-        std::cout << "erased" << std::endl;
         _connections.erase(conn);
         return conn_ptr->close().finally([conn_ptr]{});
     }
