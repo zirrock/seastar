@@ -46,14 +46,13 @@ private:
     std::unique_ptr<partitioner> _partitioner;
     lw_shared_ptr<metadata_manager> _metadata_manager;
     batcher _batcher;
-    lw_shared_ptr<seastar::future<>> _refresh_coroutine_handle;
 
 public:
     explicit kafka_producer(std::string client_id);
     seastar::future<> init(std::string server_address, uint16_t port);
     seastar::future<> produce(std::string topic_name, std::string key, std::string value);
     seastar::future<> flush();
-    seastar::future<> disconnect(); //temporary
+    seastar::future<> disconnect();
 
 };
 
