@@ -54,9 +54,7 @@ kafka_producer::kafka_producer(std::string client_id)
 
 seastar::future<> kafka_producer::init(std::string server_address, uint16_t port) {
     auto connection_future = _connection_manager->connect(server_address, port);
-    // TODO ApiVersions
-    return connection_future.discard_result().then(
-        [this]{
+    return connection_future.discard_result().then( [this]{
         _metadata_manager->start_refresh();
         return _metadata_manager->refresh_metadata().discard_result();
     });
