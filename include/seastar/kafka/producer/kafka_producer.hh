@@ -30,8 +30,6 @@
 #include "../../../../src/kafka/producer/batcher.hh"
 
 #include <seastar/core/future.hh>
-#include <seastar/core/semaphore.hh>
-#include <seastar/core/abort_source.hh>
 #include <seastar/net/net.hh>
 
 namespace seastar {
