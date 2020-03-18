@@ -68,8 +68,6 @@ future<metadata_response> connection_manager::ask_for_metadata(const seastar::ka
             }
             it ++;
         }
-        std::cout << _connections.size() << std::endl;
-        std::cout << "Throwing" << std::endl;
         throw metadata_refresh_exception("No brokers responded.");
         return res;
     });
