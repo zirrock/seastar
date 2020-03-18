@@ -19,7 +19,6 @@
  * Copyright (C) 2019 ScyllaDB Ltd.
  */
 
-#include <chrono>
 #include <iostream>
 #include <seastar/core/app-template.hh>
 #include <seastar/core/print.hh>
