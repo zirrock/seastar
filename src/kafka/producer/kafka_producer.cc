@@ -61,25 +61,26 @@ seastar::future<> kafka_producer::init(std::string server_address, uint16_t port
 }
 
 seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value) {
-    metadata_response& metadata = _metadata_manager->get_metadata();
+    return _metadata_manager->get_metadata().then([this, topic_name, key, value](metadata_response metadata){
 
-    auto partition_index = 0;
-    for (const auto& topic : *metadata._topics) {
-        if (*topic._name == topic_name) {
-            partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
-            break;
+        auto partition_index = 0;
+        for (const auto& topic : *metadata._topics) {
+            if (*topic._name == topic_name) {
+                partition_index = *_partitioner->get_partition(key, topic._partitions)._partition_index;
+                break;
+            }
         }
-    }
 
-    sender_message message;
-    message._topic = std::move(topic_name);
-    message._key = std::move(key);
-    message._value = std::move(value);
-    message._partition_index = partition_index;
+        sender_message message;
+        message._topic = std::move(topic_name);
+        message._key = std::move(key);
+        message._value = std::move(value);
+        message._partition_index = partition_index;
 
-    auto send_future = message._promise.get_future();
-    _batcher.queue_message(std::move(message));
-    return send_future;
+        auto send_future = message._promise.get_future();
+        _batcher.queue_message(std::move(message));
+        return send_future;
+    });
 }
 
 seastar::future<> kafka_producer::flush() {

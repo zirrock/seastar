@@ -39,17 +39,18 @@ private:
     metadata_response _metadata;
     bool _keep_refreshing;
     semaphore _refresh_finished;
+    semaphore _metadata_sem;
     abort_source _stop_refresh;
 
 public:
     metadata_manager(lw_shared_ptr<connection_manager>& manager)
-    : _connection_manager(manager), _refresh_finished(0) {}
+    : _connection_manager(manager), _refresh_finished(0), _metadata_sem(1) {}
 
     seastar::future<> refresh_coroutine(std::chrono::seconds dur);
-    seastar::future<metadata_response> refresh_metadata();
+    seastar::future<> refresh_metadata();
     void start_refresh();
     void stop_refresh();
-    metadata_response& get_metadata();
+    seastar::future<metadata_response> get_metadata();
 
 };
 
