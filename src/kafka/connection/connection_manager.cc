@@ -66,7 +66,7 @@ future<metadata_response> connection_manager::ask_for_metadata(const seastar::ka
             if (res._error_code == error::kafka_error_code::NONE) {
                 return res;
             }
-            it ++;
+            it++;
         }
         throw metadata_refresh_exception("No brokers responded.");
         return res;
