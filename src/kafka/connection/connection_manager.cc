@@ -40,9 +40,9 @@ future<lw_shared_ptr<kafka_connection>> connection_manager::connect(const std::s
     });
 }
 
-std::optional<lw_shared_ptr<kafka_connection>> connection_manager::get_connection(const connection_id& connection) {
+lw_shared_ptr<kafka_connection> connection_manager::get_connection(const connection_id& connection) {
     auto conn = _connections.find(connection);
-    return conn != _connections.end() ? std::make_optional(conn->second) : std::nullopt;
+    return conn != _connections.end() ? conn->second : nullptr;
 }
 
 future<> connection_manager::disconnect(const connection_id& connection) {
@@ -69,7 +69,6 @@ future<metadata_response> connection_manager::ask_for_metadata(const seastar::ka
             it++;
         }
         throw metadata_refresh_exception("No brokers responded.");
-        return res;
     });
 }
 

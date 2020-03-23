@@ -60,7 +60,7 @@ public:
         _send_semaphore(1) {}
 
     future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port, uint32_t timeout);
-    std::optional<lw_shared_ptr<kafka_connection>> get_connection(const connection_id& connection);
+    lw_shared_ptr<kafka_connection> get_connection(const connection_id& connection);
     future<> disconnect(const connection_id& connection);
 
     template<typename RequestType>

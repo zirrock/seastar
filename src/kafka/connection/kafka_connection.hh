@@ -35,8 +35,8 @@ namespace seastar {
 
 namespace kafka {
 
-class kafka_connection {
-private:
+class kafka_connection final {
+
     lw_shared_ptr<tcp_connection> _connection;
     std::string _client_id;
     int32_t _correlation_id;

@@ -29,6 +29,7 @@
 #include "../../../../src/kafka/utils/partitioner.hh"
 
 #include <seastar/util/bool_class.hh>
+#include <seastar/util/noncopyable_function.hh>
 #include <seastar/kafka/utils/defaults.hh>
 
 namespace seastar {
@@ -44,7 +45,7 @@ enum class ack_policy {
 struct enable_idempotence_tag {};
 using enable_idempotence = bool_class<enable_idempotence_tag>;
 
-class producer_properties {
+class producer_properties final {
 
 public:
 

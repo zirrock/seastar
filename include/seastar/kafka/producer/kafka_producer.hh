@@ -37,8 +37,7 @@ namespace seastar {
 
 namespace kafka {
 
-class kafka_producer {
-private:
+class kafka_producer final {
 
     producer_properties _properties;
     lw_shared_ptr<connection_manager> _connection_manager;

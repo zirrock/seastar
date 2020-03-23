@@ -26,7 +26,7 @@ namespace seastar {
 
 namespace kafka {
 
-auto timeout_end(uint32_t timeout_ms) {
+static auto timeout_end(uint32_t timeout_ms) {
     return std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
 }
 
@@ -45,10 +45,10 @@ future<lw_shared_ptr<tcp_connection>> tcp_connection::connect(const std::string&
     );
 }
 
-future<temporary_buffer<char>> tcp_connection::read(size_t bytes) {
-    auto f = _read_buf.read_exactly(bytes)
-        .then([this, bytes](temporary_buffer<char> data) {
-            if (data.size() != bytes) {
+future<temporary_buffer<char>> tcp_connection::read(size_t bytes_to_read) {
+    auto f = _read_buf.read_exactly(bytes_to_read)
+        .then([this, bytes_to_read](temporary_buffer<char> data) {
+            if (data.size() != bytes_to_read) {
                 _fd.shutdown_input();
                 _fd.shutdown_output();
                 throw tcp_connection_exception("Connection ended prematurely");

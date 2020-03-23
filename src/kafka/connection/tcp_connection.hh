@@ -31,12 +31,11 @@ namespace seastar {
 
 namespace kafka {
 
-struct tcp_connection_exception : public std::runtime_error {
-public:
+struct tcp_connection_exception final : public std::runtime_error {
     explicit tcp_connection_exception(const std::string& message) : runtime_error(message) {}
 };
 
-class tcp_connection {
+class tcp_connection final {
 
     net::inet_address _host;
     uint16_t _port;
@@ -57,9 +56,10 @@ public:
             , _write_buf(_fd.output()) {};
 
     tcp_connection(tcp_connection&& other) = default;
+    tcp_connection(tcp_connection& other) = delete;
 
     future<> write(temporary_buffer<char> buff);
-    future<temporary_buffer<char>> read(size_t bytes);
+    future<temporary_buffer<char>> read(size_t bytes_to_read);
     future<> close();
 
 };

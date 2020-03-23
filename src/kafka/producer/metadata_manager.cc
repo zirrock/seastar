@@ -49,7 +49,7 @@ namespace kafka {
                 refresh_metadata().wait();
                 try {
                     seastar::sleep_abortable(dur, _stop_refresh).get();
-                } catch (seastar::sleep_aborted e) {}
+                } catch (seastar::sleep_aborted& e) {}
             }
             _refresh_finished.signal();
             return;
