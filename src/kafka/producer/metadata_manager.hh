@@ -35,16 +35,16 @@ namespace kafka {
 class metadata_manager {
 
 private:
-    lw_shared_ptr<connection_manager> _connection_manager;
+    connection_manager& _connection_manager;
     metadata_response _metadata;
-    bool _keep_refreshing;
-    semaphore _refresh_finished;
-    semaphore _metadata_sem;
+    bool _keep_refreshing = false;
+    semaphore _refresh_finished = 0;
+    semaphore _metadata_sem = 1;
     abort_source _stop_refresh;
 
 public:
-    metadata_manager(lw_shared_ptr<connection_manager>& manager)
-    : _connection_manager(manager), _refresh_finished(0), _metadata_sem(1) {}
+    explicit metadata_manager(connection_manager& manager)
+    : _connection_manager(manager) {}
 
     seastar::future<> refresh_coroutine(std::chrono::seconds dur);
     seastar::future<> refresh_metadata();

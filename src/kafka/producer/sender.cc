@@ -28,16 +28,16 @@ namespace seastar {
 
 namespace kafka {
 
-sender::sender(lw_shared_ptr<connection_manager> connection_manager,
-        lw_shared_ptr<metadata_manager> metadata_manager,
+sender::sender(connection_manager& connection_manager,
+        metadata_manager& metadata_manager,
         uint32_t connection_timeout)
-            : _connection_manager(std::move(connection_manager)),
-            _metadata_manager(std::move(metadata_manager)),
+            : _connection_manager(connection_manager),
+            _metadata_manager(metadata_manager),
             _connection_timeout(connection_timeout) {}
 
 std::optional<sender::connection_id> sender::broker_for_topic_partition(const std::string& topic, int32_t partition_index) {
     // TODO: Improve complexity from O(N) to O(log N).
-    metadata_response metadata = _metadata_manager->get_metadata().get0();
+    metadata_response metadata = _metadata_manager.get_metadata().get0();
     for (const auto &current_topic : *metadata._topics) {
         if (*current_topic._name != topic) {
             continue;
@@ -56,7 +56,7 @@ std::optional<sender::connection_id> sender::broker_for_topic_partition(const st
 }
 
 sender::connection_id sender::broker_for_id(int32_t id) {
-    metadata_response metadata = _metadata_manager->get_metadata().get0();
+    metadata_response metadata = _metadata_manager.get_metadata().get0();
     for (const auto& broker : *metadata._brokers) {
         if (*broker._node_id == id) {
             return {*broker._host, *broker._port};
@@ -135,7 +135,7 @@ void sender::queue_requests() {
             req._topics->push_back(topic_data);
         }
 
-        _responses.emplace_back(_connection_manager->send(req, broker.first, broker.second, _connection_timeout)
+        _responses.emplace_back(_connection_manager.send(req, broker.first, broker.second, _connection_timeout)
             .then([broker](auto response) {
                 return std::make_pair(broker, response);
         }));
@@ -203,7 +203,7 @@ future<> sender::process_messages_errors() {
         }
     }
     if (should_refresh_metadata) {
-        return _metadata_manager->refresh_metadata().discard_result();
+        return _metadata_manager.refresh_metadata().discard_result();
     } else {
         return make_ready_future<>();
     }

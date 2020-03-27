@@ -35,7 +35,7 @@ namespace kafka {
         req._include_cluster_authorized_operations = true;
         req._include_topic_authorized_operations = true;
 
-        return _connection_manager->ask_for_metadata(req).then([this, req] (metadata_response metadata) {
+        return _connection_manager.ask_for_metadata(req).then([this, req] (metadata_response metadata) {
             _metadata_sem.wait(1).wait();
             _metadata = metadata;
             _metadata_sem.signal();

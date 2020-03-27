@@ -35,15 +35,14 @@ namespace kafka {
 class batcher {
 private:
     std::vector<sender_message> _messages;
-    lw_shared_ptr<metadata_manager> _metadata_manager;
-    lw_shared_ptr<connection_manager> _connection_manager;
+    metadata_manager& _metadata_manager;
+    connection_manager& _connection_manager;
     retry_helper _retry_helper;
 public:
-    batcher(lw_shared_ptr<metadata_manager> metadata_manager,
-            lw_shared_ptr<connection_manager> connection_manager,
-            uint32_t max_retries, const std::function<future<>(uint32_t)> &retry_strategy)
-            : _metadata_manager(std::move(metadata_manager)),
-            _connection_manager(std::move(connection_manager)),
+    batcher(metadata_manager& metadata_manager, connection_manager& connection_manager,
+            uint32_t max_retries, const std::function<future<>(uint32_t)>& retry_strategy)
+            : _metadata_manager(metadata_manager),
+            _connection_manager(connection_manager),
             _retry_helper(max_retries, retry_strategy) {}
 
     void queue_message(sender_message message);

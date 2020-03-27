@@ -40,8 +40,8 @@ namespace kafka {
 class kafka_producer final {
 
     producer_properties _properties;
-    lw_shared_ptr<connection_manager> _connection_manager;
-    lw_shared_ptr<metadata_manager> _metadata_manager;
+    connection_manager _connection_manager;
+    metadata_manager _metadata_manager;
     batcher _batcher;
 
 public:

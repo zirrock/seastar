@@ -64,8 +64,8 @@ public:
     using topic_partition = std::pair<std::string, int32_t>;
 
 private:
-    lw_shared_ptr<connection_manager> _connection_manager;
-    lw_shared_ptr<metadata_manager> _metadata_manager;
+    connection_manager& _connection_manager;
+    metadata_manager& _metadata_manager;
     std::vector<sender_message> _messages;
 
     std::map<connection_id, std::map<std::string, std::map<int32_t, std::vector<sender_message*>>>> _messages_split_by_broker_topic_partition;
@@ -90,7 +90,7 @@ private:
     future<> process_messages_errors();
     
 public:
-    sender(lw_shared_ptr<connection_manager> connection_manager, lw_shared_ptr<metadata_manager> metadata_manager, uint32_t connection_timeout);
+    sender(connection_manager& connection_manager, metadata_manager& metadata_manager, uint32_t connection_timeout);
 
     void move_messages(std::vector<sender_message>& messages);
     size_t messages_size() const;
