@@ -40,7 +40,7 @@ namespace kafka {
         });
     }
 
-    seastar::future<> metadata_manager::refresh_coroutine(std::chrono::seconds dur) {
+    seastar::future<> metadata_manager::refresh_coroutine(std::chrono::milliseconds dur) {
         return seastar::async({}, [this, dur]{
             while(_keep_refreshing) {
                 refresh_metadata().wait();
@@ -59,8 +59,7 @@ namespace kafka {
 
     void metadata_manager::start_refresh() {
         _keep_refreshing = true;
-        using namespace std::chrono_literals;
-        (void) refresh_coroutine(5s);
+        (void) refresh_coroutine(std::chrono::milliseconds(_expiration_time));
     }
 
     future<> metadata_manager::stop_refresh() {

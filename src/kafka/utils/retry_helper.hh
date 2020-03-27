@@ -39,7 +39,7 @@ class retry_helper {
 private:
     uint32_t _max_retry_count;
 
-    std::function<future<>(uint32_t)> _backoff;
+    noncopyable_function<future<>(uint32_t)> _backoff;
 
     template<typename AsyncAction>
     future<> with_retry(AsyncAction&& action, uint32_t retry_number) {
@@ -60,7 +60,7 @@ private:
     }
 
 public:
-    retry_helper(uint32_t max_retry_count, std::function<future<>(uint32_t)> backoff)
+    retry_helper(uint32_t max_retry_count, noncopyable_function<future<>(uint32_t)> backoff)
         : _max_retry_count(max_retry_count), _backoff(std::move(backoff)) {}
 
     template<typename AsyncAction>

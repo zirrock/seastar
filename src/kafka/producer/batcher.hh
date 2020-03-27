@@ -40,10 +40,10 @@ private:
     retry_helper _retry_helper;
 public:
     batcher(metadata_manager& metadata_manager, connection_manager& connection_manager,
-            uint32_t max_retries, const std::function<future<>(uint32_t)>& retry_strategy)
+            uint32_t max_retries, noncopyable_function<future<>(uint32_t)> retry_strategy)
             : _metadata_manager(metadata_manager),
             _connection_manager(connection_manager),
-            _retry_helper(max_retries, retry_strategy) {}
+            _retry_helper(max_retries, std::move(retry_strategy)) {}
 
     void queue_message(sender_message message);
     future<> flush(uint32_t connection_timeout);
