@@ -35,11 +35,8 @@ namespace kafka {
         req._include_cluster_authorized_operations = true;
         req._include_topic_authorized_operations = true;
 
-        return _connection_manager.ask_for_metadata(req).then([this, req] (metadata_response metadata) {
-            _metadata_sem.wait(1).wait();
-            _metadata = metadata;
-            _metadata_sem.signal();
-            return;
+        return _connection_manager.ask_for_metadata(std::move(req)).then([this] (lw_shared_ptr<const metadata_response> metadata) {
+            _metadata = std::move(metadata);
         });
     }
 
@@ -56,13 +53,8 @@ namespace kafka {
         });
     }
 
-    seastar::future<metadata_response> metadata_manager::get_metadata() {
-        return seastar::async({}, [this] {
-            _metadata_sem.wait(1).wait();
-            metadata_response metadata = _metadata;
-            _metadata_sem.signal();
-            return metadata;
-        });
+    lw_shared_ptr<const metadata_response> metadata_manager::get_metadata() {
+        return _metadata;
     }
 
     void metadata_manager::start_refresh() {
@@ -71,10 +63,10 @@ namespace kafka {
         (void) refresh_coroutine(5s);
     }
 
-    void metadata_manager::stop_refresh() {
+    future<> metadata_manager::stop_refresh() {
         _keep_refreshing = false;
         _stop_refresh.request_abort();
-        _refresh_finished.wait(1).wait();
+        return _refresh_finished.wait(1);
     }
 }
 

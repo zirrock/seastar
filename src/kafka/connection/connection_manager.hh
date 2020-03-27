@@ -52,6 +52,8 @@ private:
     semaphore _connect_semaphore;
     semaphore _send_semaphore;
 
+    future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port, uint32_t timeout);
+
 public:
 
     explicit connection_manager(std::string client_id)
@@ -59,7 +61,7 @@ public:
         _connect_semaphore(1),
         _send_semaphore(1) {}
 
-    future<lw_shared_ptr<kafka_connection>> connect(const std::string& host, uint16_t port, uint32_t timeout);
+    future<> init(const std::vector<connection_id>& servers, uint32_t request_timeout);
     lw_shared_ptr<kafka_connection> get_connection(const connection_id& connection);
     future<> disconnect(const connection_id& connection);
 
@@ -106,7 +108,7 @@ public:
         });
     }
 
-    future<metadata_response> ask_for_metadata(const metadata_request& request);
+    future<lw_shared_ptr<const metadata_response>> ask_for_metadata(metadata_request&& request);
 
 };
 

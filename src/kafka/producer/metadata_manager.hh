@@ -36,10 +36,9 @@ class metadata_manager {
 
 private:
     connection_manager& _connection_manager;
-    metadata_response _metadata;
+    lw_shared_ptr<const metadata_response> _metadata = nullptr;
     bool _keep_refreshing = false;
     semaphore _refresh_finished = 0;
-    semaphore _metadata_sem = 1;
     abort_source _stop_refresh;
 
 public:
@@ -49,8 +48,8 @@ public:
     seastar::future<> refresh_coroutine(std::chrono::seconds dur);
     seastar::future<> refresh_metadata();
     void start_refresh();
-    void stop_refresh();
-    seastar::future<metadata_response> get_metadata();
+    future<> stop_refresh();
+    lw_shared_ptr<const metadata_response> get_metadata();
 
 };
 

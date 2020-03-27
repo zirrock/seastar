@@ -40,6 +40,18 @@ future<lw_shared_ptr<kafka_connection>> connection_manager::connect(const std::s
     });
 }
 
+future<> connection_manager::init(const std::vector<connection_id>& servers, uint32_t request_timeout) {
+    std::vector<future<>> fs;
+
+    fs.reserve(servers.size());
+
+    for (auto& server : servers) {
+        fs.push_back(connect(server.first, server.second, request_timeout).discard_result());
+    }
+
+    return when_all_succeed(fs.begin(), fs.end()).discard_result();
+}
+
 lw_shared_ptr<kafka_connection> connection_manager::get_connection(const connection_id& connection) {
     auto conn = _connections.find(connection);
     return conn != _connections.end() ? conn->second : nullptr;
@@ -56,17 +68,13 @@ future<> connection_manager::disconnect(const connection_id& connection) {
     return make_ready_future();
 }
 
-future<metadata_response> connection_manager::ask_for_metadata(const seastar::kafka::metadata_request &request) {
-    return seastar::async({}, [this, request]{
-        auto it = _connections.begin();
-        metadata_response res;
-        while (it != _connections.end())
-        {
-            res =  it->second->send(request).get0();
+future<lw_shared_ptr<const metadata_response>> connection_manager::ask_for_metadata(seastar::kafka::metadata_request&& request) {
+    return seastar::async({}, [this, request = std::move(request)] {
+        for (auto& conn : _connections) {
+            auto res =  conn.second->send(request).get0();
             if (res._error_code == error::kafka_error_code::NONE) {
-                return res;
+                return make_lw_shared<const metadata_response>(std::move(res));
             }
-            it++;
         }
         throw metadata_refresh_exception("No brokers responded.");
     });
