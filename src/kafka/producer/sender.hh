@@ -25,7 +25,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <chrono>
 #include <seastar/core/future.hh>
+#include <seastar/kafka/producer/producer_properties.hh>
 #include "../protocol/metadata_response.hh"
 #include "../protocol/produce_response.hh"
 #include "../connection/connection_manager.hh"
@@ -44,6 +46,8 @@ struct sender_message {
     std::string _key;
     std::string _value;
 
+    std::chrono::time_point<std::chrono::system_clock> _timestamp;
+
     std::string _topic;
     int32_t _partition_index;
 
@@ -51,6 +55,7 @@ struct sender_message {
     promise<> _promise;
 
     sender_message() :
+        _timestamp(std::chrono::system_clock::now()),
         _partition_index(0),
         _error_code(error::kafka_error_code::UNKNOWN_SERVER_ERROR) {}
     sender_message(sender_message&& s) = default;
@@ -74,10 +79,13 @@ private:
 
     uint32_t _connection_timeout;
 
+    ack_policy _acks;
+
     std::optional<connection_id> broker_for_topic_partition(const std::string& topic, int32_t partition_index);
     connection_id broker_for_id(int32_t id);
 
     void set_error_code_for_broker(const connection_id& broker, const error::kafka_error_code& error_code);
+    void set_success_for_broker(const connection_id& broker);
     void set_error_code_for_topic_partition(const std::string& topic, int32_t partition_index,
             const error::kafka_error_code& error_code);
     void set_success_for_topic_partition(const std::string& topic, int32_t partition_index);
@@ -90,7 +98,8 @@ private:
     future<> process_messages_errors();
     
 public:
-    sender(connection_manager& connection_manager, metadata_manager& metadata_manager, uint32_t connection_timeout);
+    sender(connection_manager& connection_manager, metadata_manager& metadata_manager,
+            uint32_t connection_timeout, ack_policy acks);
 
     void move_messages(std::vector<sender_message>& messages);
     size_t messages_size() const;

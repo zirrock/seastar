@@ -30,10 +30,12 @@ namespace kafka {
 
 sender::sender(connection_manager& connection_manager,
         metadata_manager& metadata_manager,
-        uint32_t connection_timeout)
+        uint32_t connection_timeout,
+        ack_policy acks)
             : _connection_manager(connection_manager),
             _metadata_manager(metadata_manager),
-            _connection_timeout(connection_timeout) {}
+            _connection_timeout(connection_timeout),
+            _acks(acks) {}
 
 std::optional<sender::connection_id> sender::broker_for_topic_partition(const std::string& topic, int32_t partition_index) {
     // TODO: Improve complexity from O(N) to O(log N).
@@ -84,7 +86,7 @@ void sender::queue_requests() {
     _responses.clear();
     for (auto& [broker, messages_by_topic_partition] : _messages_split_by_broker_topic_partition) {
         kafka::produce_request req;
-        req._acks = -1;
+        req._acks = static_cast<int16_t>(_acks);
         req._timeout_ms = 30000;
 
         kafka::kafka_array_t<kafka::produce_request_topic_produce_data> topics{
@@ -111,7 +113,9 @@ void sender::queue_requests() {
                 record_batch._magic = 2;
                 record_batch._compression_type = kafka::kafka_record_compression_type::NO_COMPRESSION;
                 record_batch._timestamp_type = kafka::kafka_record_timestamp_type::CREATE_TIME;
-                record_batch._first_timestamp = 0x16e5b6eba2c; // TODO it should be a real time
+
+                auto first_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(messages[0]->_timestamp.time_since_epoch()).count();
+                record_batch._first_timestamp = first_timestamp;
                 record_batch._producer_id = -1;
                 record_batch._producer_epoch = -1;
                 record_batch._base_sequence = -1;
@@ -119,8 +123,10 @@ void sender::queue_requests() {
                 record_batch._is_control_batch = false;
 
                 for (size_t i = 0; i < messages.size(); i++) {
+                    auto current_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(messages[i]->_timestamp.time_since_epoch()).count();
+
                     kafka::kafka_record record;
-                    record._timestamp_delta = 0;
+                    record._timestamp_delta = current_timestamp - first_timestamp;
                     record._offset_delta = i;
                     record._key = messages[i]->_key;
                     record._value = messages[i]->_value;
@@ -135,8 +141,9 @@ void sender::queue_requests() {
             req._topics->push_back(topic_data);
         }
 
-        _responses.emplace_back(_connection_manager.send(req, broker.first, broker.second, _connection_timeout)
-            .then([broker](produce_response response) {
+        auto with_response = _acks != ack_policy::NONE;
+        _responses.emplace_back(_connection_manager.send(req, broker.first, broker.second, _connection_timeout, with_response)
+            .then([broker](auto response) {
                 return std::make_pair(broker, response);
         }));
     }
@@ -148,6 +155,18 @@ void sender::set_error_code_for_broker(const sender::connection_id& broker, cons
             for (auto& message : messages) {
                 (void)topic; (void)partition;
                 message->_error_code = error_code;
+            }
+        }
+    }
+}
+
+void sender::set_success_for_broker(const sender::connection_id& broker) {
+    for (auto& [topic, messages_by_partition] : _messages_split_by_broker_topic_partition[broker]) {
+        for (auto& [partition, messages] : messages_by_partition) {
+            for (auto& message : messages) {
+                (void)topic; (void)partition;
+                message->_error_code = error::kafka_error_code::NONE;
+                message->_promise.set_value();
             }
         }
     }
@@ -228,6 +247,11 @@ void sender::set_error_codes_for_responses(std::vector<future<std::pair<connecti
         auto [broker, response_message] = response.get0();
         if (response_message._error_code != error::kafka_error_code::NONE) {
             set_error_code_for_broker(broker, *response_message._error_code);
+            continue;
+        }
+        if (response_message._responses.is_null()) {
+            // No detailed information (when ack_policy::NONE) so set success for the broker.
+            set_success_for_broker(broker);
             continue;
         }
         for (auto& topic_response : *response_message._responses) {
