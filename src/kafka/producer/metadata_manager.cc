@@ -43,10 +43,10 @@ namespace kafka {
     seastar::future<> metadata_manager::refresh_coroutine(std::chrono::milliseconds dur) {
         return seastar::async({}, [this, dur]{
             while(_keep_refreshing) {
-                refresh_metadata().wait();
                 try {
                     seastar::sleep_abortable(dur, _stop_refresh).get();
                 } catch (seastar::sleep_aborted& e) {}
+                refresh_metadata().wait();
             }
             _refresh_finished.signal();
             return;

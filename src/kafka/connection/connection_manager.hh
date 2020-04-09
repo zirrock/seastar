@@ -28,7 +28,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <unordered_map>
+#include <map>
 
 namespace seastar {
 
@@ -46,7 +46,7 @@ public:
 
 private:
 
-    std::unordered_map<connection_id, lw_shared_ptr<kafka_connection>, boost::hash<connection_id>> _connections;
+    std::map<connection_id, lw_shared_ptr<kafka_connection>> _connections;
     std::string _client_id;
 
     semaphore _connect_semaphore;

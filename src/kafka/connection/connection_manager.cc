@@ -64,19 +64,29 @@ future<> connection_manager::disconnect(const connection_id& connection) {
         _connections.erase(conn);
         return conn_ptr->close().finally([conn_ptr]{});
     }
-
     return make_ready_future();
 }
 
 future<lw_shared_ptr<const metadata_response>> connection_manager::ask_for_metadata(seastar::kafka::metadata_request&& request) {
-    return seastar::async({}, [this, request = std::move(request)] {
-        for (auto& conn : _connections) {
-            auto res =  conn.second->send(request).get0();
-            if (res._error_code == error::kafka_error_code::NONE) {
-                return make_lw_shared<const metadata_response>(std::move(res));
+    lw_shared_ptr<const metadata_response> metadata;
+    auto conn = _connections.begin();
+
+    return seastar::repeat([this, request = std::move(request), &metadata, &conn] {
+            if (conn == _connections.end()) {
+                throw metadata_refresh_exception("No brokers responded.");
             }
-        }
-        throw metadata_refresh_exception("No brokers responded.");
+            return conn->second->send(request).then([this, &metadata, &conn](metadata_response res){
+                if (res._error_code == error::kafka_error_code::NONE) {
+                    metadata = make_lw_shared<const metadata_response>(std::move(res));
+                    return seastar::stop_iteration::yes;
+                }
+                else {
+                    conn = _connections.upper_bound(conn->first);
+                    return seastar::stop_iteration::no;
+                }
+            });
+    }).then([&metadata]{
+        return metadata;
     });
 }
 
