@@ -22,6 +22,7 @@
 
 #include "connection_manager.hh"
 #include <seastar/core/thread.hh>
+#include <memory>
 
 namespace seastar {
 
@@ -67,27 +68,29 @@ future<> connection_manager::disconnect(const connection_id& connection) {
     return make_ready_future();
 }
 
-future<lw_shared_ptr<const metadata_response>> connection_manager::ask_for_metadata(seastar::kafka::metadata_request&& request) {
-    lw_shared_ptr<const metadata_response> metadata;
-    auto conn = _connections.begin();
-
-    return seastar::repeat([this, request = std::move(request), &metadata, &conn] {
-            if (conn == _connections.end()) {
+future<metadata_response> connection_manager::ask_for_metadata(seastar::kafka::metadata_request&& request) {
+    auto conn_id = std::optional<connection_id>();
+    return seastar::do_with(metadata_response(), [this, request = std::move(request), conn_id = std::move(conn_id)] (metadata_response& metadata){
+        return seastar::repeat([this, request = std::move(request), conn_id = std::move(conn_id), &metadata] () mutable {
+            auto it = !conn_id ? _connections.begin() : _connections.upper_bound(*conn_id);
+            if (it == _connections.end()) {
                 throw metadata_refresh_exception("No brokers responded.");
             }
-            return conn->second->send(request).then([this, &metadata, &conn](metadata_response res){
+            conn_id = it->first;
+            return it->second->send(request).then([this, &metadata](metadata_response res) mutable {
                 if (res._error_code == error::kafka_error_code::NONE) {
-                    metadata = make_lw_shared<const metadata_response>(std::move(res));
+                    metadata = std::move(res);
                     return seastar::stop_iteration::yes;
                 }
                 else {
-                    conn = _connections.upper_bound(conn->first);
                     return seastar::stop_iteration::no;
                 }
             });
-    }).then([&metadata]{
-        return metadata;
+        }).then([&metadata] () mutable {
+            return std::move(metadata);
+        });
     });
+
 }
 
 }

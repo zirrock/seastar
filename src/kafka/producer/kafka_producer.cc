@@ -63,7 +63,7 @@ seastar::future<> kafka_producer::init() {
 seastar::future<> kafka_producer::produce(std::string topic_name, std::string key, std::string value) {
     auto metadata =_metadata_manager.get_metadata();
     auto partition_index = 0;
-    for (const auto& topic : *metadata->_topics) {
+    for (const auto& topic : *metadata._topics) {
         if (*topic._name == topic_name) {
             partition_index = *_properties._partitioner->get_partition(key, topic._partitions)._partition_index;
             break;

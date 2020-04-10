@@ -111,7 +111,7 @@ public:
         });
     }
 
-    future<lw_shared_ptr<const metadata_response>> ask_for_metadata(metadata_request&& request);
+    future<metadata_response> ask_for_metadata(metadata_request&& request);
 
 };
 
