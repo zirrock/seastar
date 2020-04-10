@@ -86,12 +86,20 @@ public:
         // outside the semaphore - scheduling inside semaphore
         // (only 1 at the time) and waiting for result outside it.
         return with_semaphore(_send_semaphore, 1, [this, request = std::move(request), host, port, timeout, with_response] {
-            return connect(host, port, timeout).then([request = std::move(request), with_response](auto conn) {
+            auto conn = get_connection({host, port});
+            if (conn.get() != nullptr) {
                 auto send_future = with_response
-                        ? conn->send(std::move(request)).finally([conn]{})
-                        : conn->send_without_response(std::move(request)).finally([conn]{});
+                                   ? conn->send(std::move(request)).finally([conn]{})
+                                   : conn->send_without_response(std::move(request)).finally([conn]{});
                 return make_ready_future<decltype(send_future)>(std::move(send_future));
-            });
+            } else {
+                return connect(host, port, timeout).then([request = std::move(request), with_response](auto conn) {
+                    auto send_future = with_response
+                                       ? conn->send(std::move(request)).finally([conn]{})
+                                       : conn->send_without_response(std::move(request)).finally([conn]{});
+                    return make_ready_future<decltype(send_future)>(std::move(send_future));
+                });
+            }
         }).then([](future<typename RequestType::response_type> send_future) {
             return send_future;
         }).handle_exception([] (std::exception_ptr ep) {
