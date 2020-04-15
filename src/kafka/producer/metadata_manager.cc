@@ -42,19 +42,15 @@ namespace kafka {
 
     seastar::future<> metadata_manager::refresh_coroutine(std::chrono::milliseconds dur) {
         return seastar::do_until([this]{return ! _keep_refreshing;}, [this, dur]{
-            try {
-                return seastar::sleep_abortable(dur, _stop_refresh).then([this] {
-                    return refresh_metadata();
-                }).handle_exception([this] (std::exception_ptr ep) {
-                    try {
-                        std::rethrow_exception(ep);
-                    } catch (seastar::sleep_aborted& e) {
-                        return make_ready_future();
-                    }
-                });
-            } catch (seastar::sleep_aborted& e) {
-                return make_ready_future();
-            }
+            return seastar::sleep_abortable(dur, _stop_refresh).then([this] {
+                return refresh_metadata();
+            }).handle_exception([this] (std::exception_ptr ep) {
+                try {
+                    std::rethrow_exception(ep);
+                } catch (seastar::sleep_aborted& e) {
+                    return make_ready_future();
+                }
+            });
         }).then([this]{
             _refresh_finished.signal();
             return;
