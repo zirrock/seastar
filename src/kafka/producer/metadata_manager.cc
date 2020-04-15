@@ -49,6 +49,10 @@ namespace kafka {
                     std::rethrow_exception(ep);
                 } catch (seastar::sleep_aborted& e) {
                     return make_ready_future();
+                } catch (...) {
+                    // no other exception should happen here,
+                    // if they do, they have to be handled individually
+                    std::rethrow_exception(ep);
                 }
             });
         }).then([this]{
